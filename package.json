@@ -1,0 +1,19 @@
+{
+  "name": "be-bulk",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Leonardo Utreras",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@nestjs/common": "^11.0.10",
+    "axios": "^1.7.9",
+    "he": "^1.2.0",
+    "string-similarity": "^4.0.4",
+    "xml2js": "^0.6.2"
+  }
+}
