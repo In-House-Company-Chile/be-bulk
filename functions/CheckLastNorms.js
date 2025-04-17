@@ -10,12 +10,11 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 
 class CheckLastNorms {
-    constructor(ID_NORM, HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, MAX_ID, LOG_DIR) {
+    constructor(ID_NORM, HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR) {
         this.ID_NORM = ID_NORM; 
         this.HORARIO_BLOQUEADO = HORARIO_BLOQUEADO; 
         this.PAUSA_CADA_PETICIONES = PAUSA_CADA_PETICIONES; 
         this.PAUSA_MINUTOS = PAUSA_MINUTOS; 
-        this.MAX_ID = MAX_ID; 
         this.LOG_DIR = LOG_DIR; 
     }
 
@@ -23,7 +22,7 @@ class CheckLastNorms {
         return await new CheckLastNorms(ID_NORM, HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, MAX_ID, LOG_DIR).check()
     }
 
-    async check(ID_NORM) {
+    async check() {
         try {
             let requestCount = 0;
             let errorCount = 0;
@@ -35,7 +34,7 @@ class CheckLastNorms {
                 console.log(`🔄 Reanudando desde la norma ID: ${this.ID_NORM}`);
             }
     
-            while (this.ID_NORM <= this.MAX_ID) {
+            while (errorCount < MAX_ERRORES_CONSECUTIVOS) {
                 const currentHour = new Date().getHours();
     
                 // Si estamos en horario bloqueado, esperar hasta que termine
@@ -57,7 +56,7 @@ class CheckLastNorms {
                         const data = response.data;
     
                         // Guardar JSON con HTML estructurado
-                        const jsonData = { idNorma: this.ID_NORM, texto: htmlUnificado, planeText: planeText, data, metadatos: JSON.stringify(data.metadatos) };
+                        const jsonData = { idNorm: this.ID_NORM, texto: htmlUnificado, planeText: planeText, data, metadatos: JSON.stringify(data.metadatos) };
                         fs.writeFileSync(`norms/${this.ID_NORM}.json`, JSON.stringify(jsonData, null, 2));
     
                         // Guardar el último ID procesado

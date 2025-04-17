@@ -67,6 +67,16 @@ const loadNormasFromJSON = async (directory) => {
                 fecha_promulgacion: parsedJson.data.metadatos.fecha_promulgacion || '',
                 planeText: parsedJson.planeText || '',
             });
+
+            // Mover archivo a la carpeta 'processed'
+            const processedDir = 'vectorized';
+            if (!fs.existsSync(processedDir)) {
+                fs.mkdirSync(processedDir);
+            }
+
+            const processedFilePath = path.join(processedDir, file);
+            fs.renameSync(filePath, processedFilePath);
+            console.log("🚀 ~ Archivo movido a 'processed':", processedFilePath);
         } catch (error) {
             console.error(`Error al procesar ${file}:`);
         }
@@ -77,7 +87,6 @@ const loadNormasFromJSON = async (directory) => {
 
 const upload = async (directory) => {
     try {
-        const files = fs.readdirSync(directory).filter(file => file.endsWith('.json'));
         const normas = await loadNormasFromJSON(directory);
 
         // Asegurar que exista la carpeta 'filtred'
@@ -98,10 +107,13 @@ const upload = async (directory) => {
                 const res = await LoadDocumentAi(filePathFiltred);
 
                 // 3. Subir con metadatos
-                await UploadDocumentAi(res.data,800,'txt','pruebaNormas1','false',{metadata: {id: item.id,fechaPublicacion: item.fecha_publicacion,fechaPromulgacion: item.fecha_promulgacion}});
+                await UploadDocumentAi(res.data, 800, 'txt', 'pruebaNormas1', 'false', { metadata: { id: item.id, fechaPublicacion: item.fecha_publicacion, fechaPromulgacion: item.fecha_promulgacion } });
 
                 // 4. Eliminar temporal
                 await DeleteDocumentAi(filePathFiltred);
+
+                fs.unlinkSync(filePathFiltred);
+                console.log("🚀 ~ Archivo eliminado:", filePathFiltred);
 
             } catch (error) {
                 console.error(`Error procesando norma ${item.id} (índice ${index}):`, error.message);
