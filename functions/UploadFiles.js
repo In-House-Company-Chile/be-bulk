@@ -43,7 +43,7 @@ class UploadFiles {
                     await UploadDocumentAi.create(res.data, this.chunkSize, this.extension, this.namespace, this.deleteBot, { metadata: { id: item.id, fechaPublicacion: item.fecha_publicacion, fechaPromulgacion: item.fecha_promulgacion } });
 
                     // 4. Eliminar temporal
-                    await DeleteDocumentAi.create(filePathFiltred);
+                    await DeleteDocumentAi.create(res.data);
 
                     fs.unlinkSync(filePathFiltred);
                     console.log("🚀 ~ Archivo eliminado:", filePathFiltred);
