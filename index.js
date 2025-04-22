@@ -3,6 +3,7 @@ const fs = require('fs');
 const CheckLastNorms = require('./functions/CheckLastNorms');
 const nodecron = require('node-cron');
 const UploadFiles = require('./functions/UploadFiles');
+const NormalizeWord = require('./functions/NormalizeWord');
 
 const HORARIO_BLOQUEADO = { inicio: 0, fin: 6 };
 const PAUSA_CADA_PETICIONES = 100;
@@ -20,6 +21,7 @@ if (!fs.existsSync('norms')) fs.mkdirSync('norms', { recursive: true });
 // CheckNorms.create(ID_NORM, HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, MAX_ID, LOG_DIR)
 // CheckLastNorms.create(ID_NORM, HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR)
 
+// console.log("🚀 ~ Normalizado:", NormalizeWord.create('ACD-S/N'))
 UploadFiles.create(path, 800, 'txt', 'pruebaNormas2', 'false')
 
 // nodecron.schedule('0 0 * * *', async () => {

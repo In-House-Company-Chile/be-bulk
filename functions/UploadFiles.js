@@ -4,6 +4,7 @@ const UploadDocumentAi = require('./UploadDocumentAi');
 const DeleteDocumentAi = require('./DeleteDocumentAi');
 const fs = require('fs');
 const path = require('path');
+const NormalizeWord = require('./NormalizeWord');
 
 class UploadFiles {
     constructor(filePath, chunkSize = 800, extension = 'txt', namespace = 'pruebaNormas1', deleteBot = 'false') {
@@ -40,7 +41,7 @@ class UploadFiles {
                     const res = await LoadDocumentAi.create(filePathFiltred);
 
                     // 3. Subir con metadatos
-                    await UploadDocumentAi.create(res.data, this.chunkSize, this.extension, this.namespace, this.deleteBot, { metadata: { id: item.id, fechaPublicacion: item.fecha_publicacion, fechaPromulgacion: item.fecha_promulgacion } });
+                    await UploadDocumentAi.create(res.data, this.chunkSize, this.extension, this.namespace, this.deleteBot, { metadata: { id: item.id, fechaPublicacion: item.fecha_publicacion, fechaPromulgacion: item.fecha_promulgacion, compuesto: NormalizeWord.create(item.compuesto[0].compuesto), tituloNorma: NormalizeWord.create(item.titulo_norma), organismos: NormalizeWord.create(item.organismos.join(', ')) } });
 
                     // 4. Eliminar temporal
                     await DeleteDocumentAi.create(res.data);
