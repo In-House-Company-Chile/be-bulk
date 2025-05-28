@@ -1,4 +1,4 @@
-const LoadNormasFromJSON = require('./LoadNormasFromJSON');
+const LoadNormasFromJSON = require('./LoadNormasFromDir');
 const LoadDocumentAi = require('./LoadDocumentAi');
 const UploadDocumentAi = require('./UploadDocumentAi');
 const DeleteDocumentAi = require('./DeleteDocumentAi');
@@ -41,7 +41,20 @@ class UploadFiles {
                     const res = await LoadDocumentAi.create(filePathFiltred);
 
                     // 3. Subir con metadatos
-                    await UploadDocumentAi.create(res.data, this.chunkSize, this.extension, this.namespace, this.deleteBot, { metadata: { id: item.id, fechaPublicacion: item.fecha_publicacion, fechaPromulgacion: item.fecha_promulgacion, compuesto: NormalizeWord.create(item.compuesto[0].compuesto), tituloNorma: NormalizeWord.create(item.titulo_norma), organismos: NormalizeWord.create(item.organismos.join(', ')) } });
+                    await UploadDocumentAi.create(res.data, this.chunkSize, this.extension, this.namespace, this.deleteBot, {
+                        metadata: {
+                            id: item.id,
+                            fechaPublicacion: item.fecha_publicacion,
+                            fechaPromulgacion: item.fecha_promulgacion,
+                            compuesto: NormalizeWord.create(item.compuesto[0].compuesto),
+                            tituloNorma: NormalizeWord.create(item.titulo_norma),
+                            organismos: item.organismos.map(e => NormalizeWord.create(e)),
+                            fuente: NormalizeWord.create(item.fuente),
+                            inicioVigencia: item.inicio_vigencia,
+                            fin_vigencia: item.fin_vigencia,
+                            tipoVersion: NormalizeWord.create(item.tipo_version_s),
+                        }
+                    });
 
                     // 4. Eliminar temporal
                     await DeleteDocumentAi.create(res.data);
