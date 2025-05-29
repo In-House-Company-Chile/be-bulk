@@ -32,7 +32,7 @@ class CheckLastNorms {
         try {
             let requestCount = 0;
             let errorCount = 0;
-            const MAX_ERRORES_CONSECUTIVOS = 50;
+            const MAX_ERRORES_CONSECUTIVOS = 100;
     
             // Cargar el último ID procesado si existe
             if (fs.existsSync(`${this.LOG_DIR}/last_norm.log`)) {
