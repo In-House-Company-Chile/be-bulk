@@ -10,9 +10,16 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@langchain/core": "^0.3.57",
+    "@langchain/openai": "^0.5.11",
+    "@langchain/pinecone": "^0.2.0",
+    "@langchain/textsplitters": "^0.1.0",
     "@nestjs/common": "^11.0.10",
     "axios": "^1.7.9",
+    "dotenv": "^16.5.0",
     "he": "^1.2.0",
+    "mongodb": "^6.16.0",
+    "node-cron": "^3.0.3",
     "string-similarity": "^4.0.4",
     "xml2js": "^0.6.2"
   }

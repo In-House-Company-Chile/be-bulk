@@ -2,6 +2,9 @@ const ExtractText = require('./ExtractText');
 const LogsError = require('./LogsError');
 const MergeHtml = require('./MergeHtml');
 const UpdateLastProcess = require('./UpdateLastProcess');
+const IndexarMongo = require('./IndexarMongo');
+const IndexarPinecone = require('./IndexarPinecone');
+const LoadNormasFromJSON = require('./LoadNormasFromJSON');
 
 const fs = require('fs');
 const axios = require('axios');
@@ -10,20 +13,22 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 
 class CheckLastNorms {
-    constructor(ID_NORM, HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, MAX_ID, LOG_DIR) {
-        this.ID_NORM = ID_NORM; 
+    constructor(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, dbName, dbCollection, namespace) {
+        this.ID_NORM = 1137568; 
         this.HORARIO_BLOQUEADO = HORARIO_BLOQUEADO; 
         this.PAUSA_CADA_PETICIONES = PAUSA_CADA_PETICIONES; 
         this.PAUSA_MINUTOS = PAUSA_MINUTOS; 
-        this.MAX_ID = MAX_ID; 
         this.LOG_DIR = LOG_DIR; 
+        this.dbName = dbName;
+        this.dbCollection = dbCollection;
+        this.namespace = namespace;
     }
 
-    static async create(ID_NORM, HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, MAX_ID, LOG_DIR) {
-        return await new CheckLastNorms(ID_NORM, HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, MAX_ID, LOG_DIR).check()
+    static async create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, MAX_ID, LOG_DIR, dbName, dbCollection, namespace) {
+        return await new CheckLastNorms(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, MAX_ID, LOG_DIR, dbName, dbCollection, namespace).check()
     }
 
-    async check(ID_NORM) {
+    async check() {
         try {
             let requestCount = 0;
             let errorCount = 0;
@@ -35,7 +40,7 @@ class CheckLastNorms {
                 console.log(`🔄 Reanudando desde la norma ID: ${this.ID_NORM}`);
             }
     
-            while (this.ID_NORM <= this.MAX_ID) {
+            while (errorCount < MAX_ERRORES_CONSECUTIVOS) {
                 const currentHour = new Date().getHours();
     
                 // Si estamos en horario bloqueado, esperar hasta que termine
@@ -50,16 +55,21 @@ class CheckLastNorms {
                     console.log("🚀 ~ check ~ idNorma:", this.ID_NORM);
                     response = await axios.get(url, { responseType: 'json' });
     
-                    if (response.data) {
+                    if (response.data && response.data.metadatos) {
                         // Aplicar la función recursiva antes de guardar el JSON
                         const htmlUnificado = MergeHtml.create(response.data);
                         const planeText = ExtractText.create(htmlUnificado);
                         const data = response.data;
     
                         // Guardar JSON con HTML estructurado
-                        const jsonData = { idNorma: this.ID_NORM, texto: htmlUnificado, planeText: planeText, data, metadatos: JSON.stringify(data.metadatos) };
-                        fs.writeFileSync(`norms/${this.ID_NORM}.json`, JSON.stringify(jsonData, null, 2));
-    
+                        const jsonData = { idNorm: this.ID_NORM, texto: htmlUnificado, planeText: planeText, data, metadatos: JSON.stringify(data.metadatos) };
+                        
+                        const indexMongo = await IndexarMongo.create(jsonData, this.dbName, this.dbCollection);
+                        if (indexMongo !== 'OK') {
+                            fs.writeFileSync(`norms/${this.ID_NORM}.json`, JSON.stringify(jsonData, null, 2));
+                            LoadNormasFromJSON.create(jsonData, 'facets')
+                            await IndexarPinecone.create(jsonData, 'bigdata', this.namespace);
+                        }
                         // Guardar el último ID procesado
                         UpdateLastProcess.create(this.ID_NORM, this.LOG_DIR);
     
