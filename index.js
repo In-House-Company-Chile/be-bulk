@@ -8,8 +8,8 @@ const PAUSA_CADA_PETICIONES = 100;
 const PAUSA_MINUTOS = 5;
 const LOG_DIR = 'logs';
 const dbName = 'buscadorDB';
-const dbCollection = 'leychile';
-const namespace = 'leychile';
+const dbCollection = 'normas';
+const namespace = 'documentos';
 
 
 // Asegurar que los directorios existen
@@ -19,8 +19,8 @@ if (!fs.existsSync('facets')) fs.mkdirSync('facets', { recursive: true });
 
 // LoadNormasFromDir.create('C:/Users/ljutr/Desktop/Norms/vectorized')
 
-CheckLastNorms.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, dbName, dbCollection, namespace)
-// nodecron.schedule('0 8 * * *', async () => {
-//     console.log('🕗 Iniciando verificación de normas a las 8:00 AM');
-//     CheckLastNorms.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, dbName, dbCollection, namespace)
-// });
+// CheckLastNorms.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, dbName, dbCollection, namespace)
+nodecron.schedule('0 8 * * *', async () => {
+    console.log('🕗 Iniciando verificación de normas a las 8:00 AM');
+    CheckLastNorms.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, dbName, dbCollection, namespace)
+});

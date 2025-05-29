@@ -87,8 +87,8 @@ class CheckLastNorms {
                 }
     
                 // Si se alcanza el límite de errores consecutivos, detener el proceso
-                if (errorCount >= this.MAX_ERRORES_CONSECUTIVOS) {
-                    console.log(`🚨 Se han alcanzado ${this.MAX_ERRORES_CONSECUTIVOS} errores consecutivos. Finalizando iteración.`);
+                if (errorCount >= MAX_ERRORES_CONSECUTIVOS) {
+                    console.log(`🚨 Se han alcanzado ${MAX_ERRORES_CONSECUTIVOS} errores consecutivos. Finalizando iteración.`);
                     break;
                 }
     
