@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { OpenAIEmbeddings } = require('@langchain/openai');
-const { RecursiveCharacterTextSplitter } = require('@langchain/textSplitters');
+const { RecursiveCharacterTextSplitter } = require('@langchain/textsplitters');
 const { Pinecone } = require('@pinecone-database/pinecone');
 const { PineconeStore } = require('@langchain/pinecone');
 
