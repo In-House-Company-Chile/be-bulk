@@ -10,10 +10,10 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@langchain/community": "^0.3.45",
     "@langchain/core": "^0.3.57",
     "@langchain/openai": "^0.5.11",
     "@langchain/pinecone": "^0.2.0",
-    "@langchain/textsplitters": "^0.1.0",
     "@nestjs/common": "^11.0.10",
     "axios": "^1.7.9",
     "dotenv": "^16.5.0",
