@@ -64,7 +64,7 @@ class LoadNormasFromDir {
                     });
 
                     // Mover archivo a la carpeta 'processed'
-                    const processedDir = 'vectorized';
+                    const processedDir = 'C:/Users/ljutr/Desktop/Norms/vm';
                     if (!fs.existsSync(processedDir)) {
                         fs.mkdirSync(processedDir);
                     }
