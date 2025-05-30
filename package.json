@@ -16,6 +16,7 @@
     "@langchain/pinecone": "^0.2.0",
     "@nestjs/common": "^11.0.10",
     "axios": "^1.7.9",
+    "cheerio": "^1.0.0",
     "dotenv": "^16.5.0",
     "he": "^1.2.0",
     "mongodb": "^6.16.0",
