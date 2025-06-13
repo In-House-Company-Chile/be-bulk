@@ -212,83 +212,116 @@ async function getData(idBuscadorBase, refererUrl) {
         };
 
         while (page < finalPage) {
-            try {
-                // Obtener cookies válidas
-                const { token, cookie } = await getValidCookies();
-                
-                console.log(`📄 Procesando página ${Math.floor(page/elementPerPage) + 1} (offset: ${page})`);
+            let retryCount = 0;
+            const maxRetries = 3;
+            let success = false;
 
-                const payload = createMultipartPayload(token, idBuscador, elementPerPage, page);
-                
-                const response = await axios.post(
-                    'https://juris.pjud.cl/busqueda/buscar_sentencias',
-                    payload,
-                    {
-                        headers: {
-                            ...headers,
-                            'Cookie': cookie
-                        },
-                        timeout: 30000 // Timeout de 30 segundos
+            while (retryCount < maxRetries && !success) {
+                try {
+                    // Obtener cookies válidas (nuevas en cada reintento)
+                    const { token, cookie } = await getValidCookies();
+                    
+                    console.log(`📄 Procesando página ${Math.floor(page/elementPerPage) + 1} (offset: ${page})${retryCount > 0 ? ` - Intento ${retryCount + 1}/${maxRetries}` : ''}`);
+
+                    const payload = createMultipartPayload(token, idBuscador, elementPerPage, page);
+                    
+                    const response = await axios.post(
+                        'https://juris.pjud.cl/busqueda/buscar_sentencias',
+                        payload,
+                        {
+                            headers: {
+                                ...headers,
+                                'Cookie': cookie
+                            },
+                            timeout: 30000 // Timeout de 30 segundos
+                        }
+                    );
+
+                    if (!response.data?.response?.docs) {
+                        console.log('⚠️ No se encontraron más documentos');
+                        success = true;
+                        break;
                     }
-                );
 
-                if (!response.data?.response?.docs) {
-                    console.log('⚠️ No se encontraron más documentos');
-                    break;
-                }
+                    const sentencias = response.data.response.docs;
+                    // finalPage = response.data.response.numFound;
 
-                const sentencias = response.data.response.docs;
-                // finalPage = response.data.response.numFound;
+                    console.log(`📊 Total encontrado: ${finalPage}, Página actual: ${sentencias.length} sentencias`);
 
-                console.log(`📊 Total encontrado: ${finalPage}, Página actual: ${sentencias.length} sentencias`);
+                    // Procesar sentencias en lote
+                    const newSentencias = [];
+                    for (const sentencia of sentencias) {
+                        if (!existingFiles.has(sentencia.id)) {
+                            newSentencias.push(sentencia);
+                            existingFiles.add(sentencia.id); // Actualizar el set
+                        } else {
+                            duplicateCount++;
+                        }
+                    }
 
-                // Procesar sentencias en lote
-                const newSentencias = [];
-                for (const sentencia of sentencias) {
-                    if (!existingFiles.has(sentencia.id)) {
-                        newSentencias.push(sentencia);
-                        existingFiles.add(sentencia.id); // Actualizar el set
+                    // Escribir archivos solo para sentencias nuevas
+                    if (newSentencias.length > 0) {
+                        const writePromises = newSentencias.map(sentencia => {
+                            const fileName = path.join(sentenciasDir, `${sentencia.id}.json`);
+                            return fs.promises.writeFile(fileName, JSON.stringify(sentencia, null, 2));
+                        });
+
+                        await Promise.all(writePromises);
+                        processedCount += newSentencias.length;
+                        console.log(`✅ ${newSentencias.length} sentencias nuevas guardadas (${duplicateCount} duplicadas omitidas)`);
                     } else {
-                        duplicateCount++;
+                        console.log(`⚠️ Todas las sentencias de esta página ya existen`);
+                    }
+
+                    success = true; // Marcar como exitoso
+                    page += elementPerPage;
+
+                    // Si no hay más páginas, salir
+                    if (page >= finalPage) {
+                        break;
+                    }
+
+                    // Pausa adaptativa: menos tiempo si hay muchas sentencias nuevas
+                    const pauseTime = newSentencias.length > 0 ? 1500 : 3000;
+                    console.log(`⏳ Esperando ${pauseTime/1000}s antes de la siguiente página...`);
+                    await new Promise(resolve => setTimeout(resolve, pauseTime));
+
+                } catch (error) {
+                    retryCount++;
+                    console.error(`❌ Error en página ${Math.floor(page/elementPerPage) + 1} (intento ${retryCount}/${maxRetries}):`, error.message);
+                    
+                    // Si es error de timeout o red
+                    if (error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND' || error.message.includes('timeout')) {
+                        if (retryCount < maxRetries) {
+                            console.log(`🔄 Reintentando con nuevas cookies en 5 segundos...`);
+                            // Invalidar cache de cookies para forzar nuevas cookies
+                            cookieCache.timestamp = 0;
+                            await new Promise(resolve => setTimeout(resolve, 5000));
+                        } else {
+                            console.error(`💥 Se agotaron los ${maxRetries} intentos para la página ${Math.floor(page/elementPerPage) + 1}. Terminando ejecución.`);
+                            // Mostrar resumen final antes de terminar
+                            const totalFiles = fs.readdirSync(sentenciasDir).filter(f => f.endsWith('.json')).length;
+                            console.log(`🎉 Proceso terminado por timeout (resumen final):`);
+                            console.log(`   📁 Total archivos: ${totalFiles}`);
+                            console.log(`   ✅ Nuevos procesados: ${processedCount}`);
+                            console.log(`   ⚠️ Duplicados omitidos: ${duplicateCount}`);
+                            console.log(`   ⏳ Tiempo de ejecución: ${new Date() - start}ms`);
+                            console.log(`   📄 Última página procesada: ${Math.floor(page/elementPerPage)}`);
+                            return; // Terminar la función completamente
+                        }
+                    } else {
+                        // Para otros tipos de error, no reintentar
+                        console.error(`❌ Error no relacionado con timeout, continuando con la siguiente página...`);
+                        success = true; // Marcar como "exitoso" para continuar
+                        page += elementPerPage;
+                        break;
                     }
                 }
+            }
 
-                // Escribir archivos solo para sentencias nuevas
-                if (newSentencias.length > 0) {
-                    const writePromises = newSentencias.map(sentencia => {
-                        const fileName = path.join(sentenciasDir, `${sentencia.id}.json`);
-                        return fs.promises.writeFile(fileName, JSON.stringify(sentencia, null, 2));
-                    });
-
-                    await Promise.all(writePromises);
-                    processedCount += newSentencias.length;
-                    console.log(`✅ ${newSentencias.length} sentencias nuevas guardadas (${duplicateCount} duplicadas omitidas)`);
-                } else {
-                    console.log(`⚠️ Todas las sentencias de esta página ya existen`);
-                }
-
-                page += elementPerPage;
-
-                // Si no hay más páginas, salir
-                if (page >= finalPage) {
-                    break;
-                }
-
-                // Pausa adaptativa: menos tiempo si hay muchas sentencias nuevas
-                const pauseTime = newSentencias.length > 0 ? 1500 : 3000;
-                console.log(`⏳ Esperando ${pauseTime/1000}s antes de la siguiente página...`);
-                await new Promise(resolve => setTimeout(resolve, pauseTime));
-
-            } catch (error) {
-                console.error(`❌ Error en página ${Math.floor(page/elementPerPage) + 1}:`, error.message);
-                
-                // Si es error de timeout o red, esperar más tiempo
-                if (error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND') {
-                    console.log('⏳ Error de conexión, esperando 10 segundos...');
-                    await new Promise(resolve => setTimeout(resolve, 10000));
-                }
-                
-                page += elementPerPage; // Continuar con la siguiente página
+            // Si no se logró éxito después de todos los reintentos
+            if (!success && retryCount >= maxRetries) {
+                break; // Salir del bucle principal
             }
         }
 
@@ -437,7 +470,7 @@ async function indexarTodasLasSentencias() {
         console.error('❌ Error general al indexar sentencias:', error.message);
     }
 }
-
+/* puedes hacer que si una peticion le da timeout no avance a la siguiente pagina? que lo vuelva a intentar con unas nuevas cookies, el intento debe ser maximo de 3 veces de lo contrario terminar la ejecucion mostrando los consolelog finales de resumen */
 getData(ID_BUSCADOR, BASE_BJUD_URL)
 
 // indexarTodasLasSentencias();
