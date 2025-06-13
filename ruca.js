@@ -17,6 +17,9 @@ const client = new MongoClient(uri);
 
 const BASE_BJUD_URL = process.env.BASE_BJUD_URL
 const ID_BUSCADOR = process.env.ID_BUSCADOR
+const ELEMENT_PER_PAGE = parseInt(process.env.ELEMENT_PER_PAGE)
+const PAGE = parseInt(process.env.PAGE)
+const FINAL_PAGE = parseInt(process.env.FINAL_PAGE)
 
 const config = {
     PINECONE: {
@@ -167,9 +170,9 @@ function createMultipartPayload(token, idBuscador, elementPerPage, page) {
 async function getData(idBuscadorBase, refererUrl) {
     const start = new Date();
     try {
-        let finalPage = 1000;
-        let elementPerPage = 100; // Aumentado de 10 a 50 para menos requests
-        let page = 0;
+        let finalPage = FINAL_PAGE;
+        let elementPerPage = ELEMENT_PER_PAGE; // Aumentado de 10 a 50 para menos requests
+        let page = PAGE;
         let processedCount = 0;
         let duplicateCount = 0;
 
