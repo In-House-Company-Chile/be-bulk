@@ -238,7 +238,7 @@ async function getData(idBuscadorBase, refererUrl) {
                 }
 
                 const sentencias = response.data.response.docs;
-                finalPage = response.data.response.numFound;
+                // finalPage = response.data.response.numFound;
 
                 console.log(`📊 Total encontrado: ${finalPage}, Página actual: ${sentencias.length} sentencias`);
 
