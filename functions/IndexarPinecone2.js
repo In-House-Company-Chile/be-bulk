@@ -62,7 +62,7 @@ class IndexarPinecone {
         namespace: this.namespace,
       });
 
-      console.log(`✅ Indexado en Pinecone: ${this.doc.idNorm}`);
+      console.log(`✅ Indexado en Pinecone: ${this.doc.idSentence}`);
 
     } catch (embeddingErr) {
       console.warn(`⚠️ Error al generar embedding para ${this.doc.idNorm}:`, embeddingErr);
