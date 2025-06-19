@@ -446,7 +446,7 @@ async function getData(idBuscadorBase, refererUrl) {
  * @param {string} tipoBase - Tipo de base (ej: 'civil', 'penal', 'familia', etc.)
  * @param {Object} options - Opciones adicionales { indexPinecone: boolean, indexMongo: boolean }
  */
-async function indexarSentenciasFromData(sentenciasData, dbName, collection, tipoBase = 'civil', options = { indexPinecone: true, indexMongo: true }) {
+async function indexarSentenciasFromData(sentenciasData, dbName, collection, tipoBase, options = { indexPinecone: true, indexMongo: true }) {
   try {
     // Validar parámetros
     if (!Array.isArray(sentenciasData) || sentenciasData.length === 0) {
@@ -625,10 +625,9 @@ function createMetadataByType(jsonData, tipoBase) {
         juez: jsonData.gls_juez_ss || [],
       };
 
-    case 'salud_ca':
+    case 'salud_corte_de_apelaciones':
       return {
         ...baseMetadata,
-        base: 'salud corte de apelaciones',
         rol: jsonData.rol_era_ape_s || '',
         caratulado: jsonData.caratulado_s || '',
         corte: jsonData.gls_corte_s || '',
@@ -640,10 +639,9 @@ function createMetadataByType(jsonData, tipoBase) {
         isapre: jsonData.isapre_ss || [],
       };
 
-    case 'salud_cs':
+    case 'salud_corte_suprema':
       return {
         ...baseMetadata,
-        base: 'salud corte suprema',
         rol: jsonData.rol_era_sup_s || '',
         caratulado: jsonData.caratulado_s || '',
         fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
@@ -668,6 +666,52 @@ function createMetadataByType(jsonData, tipoBase) {
         juez: jsonData.gls_juez_ss || '',
       };
 
+    case 'corte_suprema':
+      return {
+        ...baseMetadata,
+        rol: jsonData.rol_era_sup_s || '',
+        caratulado: jsonData.caratulado_s || '',
+        fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
+        sala: jsonData.gls_sala_sup_s || '',
+        corte: jsonData.gls_corte_s || '',
+        era: jsonData.era_sup_i || 0,
+        categorizacion: jsonData.sent__categorizacion_s || '',
+        resultado: jsonData.resultado_recurso_sup_s || '',
+        redactor: jsonData.gls_relator_s || '',
+        ministro: jsonData.gls_ministro_ss || [],
+        tipoRecurso: jsonData.gls_tip_recurso_sup_s || '',
+        descriptores: jsonData.gls_descriptor_ss || [],
+        idNorm: jsonData.id_norma_ss || [],
+        articulo: jsonData.norma_articulo_ss || [],
+      };
+
+    case 'laboral':
+      return {
+        ...baseMetadata,
+        rol: jsonData.rol_era_sup_s || '',
+        caratulado: jsonData.caratulado_s || '',
+        fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
+        era: jsonData.era_sup_i || 0,
+        categorizacion: jsonData.gls_materia_s || [],
+        tribunal: jsonData.gls_juz_s || '',
+        juez: jsonData.gls_juez_ss || '',
+      };
+
+    case 'corte_de_apelaciones':
+      return {
+        ...baseMetadata,
+        rol: jsonData.rol_era_sup_s || '',
+        caratulado: jsonData.caratulado_s || '',
+        fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
+        era: jsonData.era_sup_i || 0,
+        categorizacion: jsonData.gls_materia_s || '',
+        sala: jsonData.gls_sala_sup_s || '',
+        corte: jsonData.gls_corte_s || '',
+        resultado: jsonData.resultado_recurso_sup_s || '',
+        tipoRecurso: jsonData.tip_recurso_s || '',
+        juez: jsonData.gls_juez_s || '',
+      };
+
     default:
       // Metadata genérico
       return {
@@ -686,7 +730,7 @@ function createMetadataByType(jsonData, tipoBase) {
  */
 function createMongoEntry(jsonData, tipoBase) {
   const baseEntry = {
-    idSentence: parseInt(jsonData.id) || jsonData.id,
+    idSentence: jsonData.id,
     base: tipoBase,
     url: jsonData.url_corta_acceso_sentencia || '',
     data: jsonData,
@@ -728,10 +772,9 @@ function createMongoEntry(jsonData, tipoBase) {
         juez: jsonData.gls_juez_ss || [],
       };
 
-    case 'salud_ca':
+    case 'salud_corte_de_apelaciones':
       return {
         ...baseEntry,
-        base: 'salud corte de apelaciones',
         rol: jsonData.rol_era_ape_s || '',
         caratulado: jsonData.caratulado_s || '',
         corte: jsonData.gls_corte_s || '',
@@ -743,10 +786,9 @@ function createMongoEntry(jsonData, tipoBase) {
         isapre: jsonData.isapre_ss || [],
       };
 
-    case 'salud_cs':
+    case 'salud_corte_suprema':
       return {
         ...baseEntry,
-        base: 'salud corte suprema',
         rol: jsonData.rol_era_sup_s || '',
         caratulado: jsonData.caratulado_s || '',
         fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
@@ -769,6 +811,52 @@ function createMongoEntry(jsonData, tipoBase) {
         fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
         tribunal: jsonData.gls_juz_s || '',
         juez: jsonData.gls_juez_ss || [],
+      };
+
+    case 'corte_suprema':
+      return {
+        ...baseEntry,
+        rol: jsonData.rol_era_sup_s || '',
+        caratulado: jsonData.caratulado_s || '',
+        fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
+        sala: jsonData.gls_sala_sup_s || '',
+        corte: jsonData.gls_corte_s || '',
+        era: jsonData.era_sup_i || 0,
+        categorizacion: jsonData.sent__categorizacion_s || '',
+        resultado: jsonData.resultado_recurso_sup_s || '',
+        redactor: jsonData.gls_relator_s || '',
+        ministro: jsonData.gls_ministro_ss || [],
+        tipoRecurso: jsonData.gls_tip_recurso_sup_s || '',
+        descriptores: jsonData.gls_descriptor_ss || [],
+        idNorm: jsonData.id_norma_ss || [],
+        articulo: jsonData.norma_articulo_ss || [],
+      };
+
+    case 'laboral':
+      return {
+        ...baseEntry,
+        rol: jsonData.rol_era_sup_s || '',
+        caratulado: jsonData.caratulado_s || '',
+        fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
+        era: jsonData.era_sup_i || 0,
+        categorizacion: jsonData.gls_materia_s || [],
+        tribunal: jsonData.gls_juz_s || '',
+        juez: jsonData.gls_juez_ss || '',
+      };
+
+    case 'corte_de_apelaciones':
+      return {
+        ...baseEntry,
+        rol: jsonData.rol_era_sup_s || '',
+        caratulado: jsonData.caratulado_s || '',
+        fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
+        era: jsonData.era_sup_i || 0,
+        categorizacion: jsonData.gls_materia_s || '',
+        sala: jsonData.gls_sala_sup_s || '',
+        corte: jsonData.gls_corte_s || '',
+        resultado: jsonData.resultado_recurso_sup_s || '',
+        tipoRecurso: jsonData.tip_recurso_s || '',
+        juez: jsonData.gls_juez_s || '',
       };
 
     default:
