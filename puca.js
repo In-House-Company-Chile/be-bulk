@@ -870,31 +870,37 @@ function createMongoEntry(jsonData, tipoBase) {
 
 // CONFIGURACIONES DE OPTIMIZACIÓN PARA DIFERENTES ESCENARIOS
 const MONGO_OPTIMIZATION_CONFIGS = {
-  // Para cargas muy pesadas (>100k documentos)
+  // Para cargas muy pesadas (>100k documentos) - Configuración conservadora para evitar timeouts
   HEAVY_LOAD: {
-    BATCH_SIZE: 200,
-    MAX_POOL_SIZE: 30,
-    MIN_POOL_SIZE: 10,
+    BATCH_SIZE: 50,        // Reducido para evitar timeouts
+    MAX_POOL_SIZE: 15,     // Reducido para evitar saturar el servidor
+    MIN_POOL_SIZE: 5,
     WRITE_CONCERN: { w: 1, j: false },
-    BATCH_PAUSE_MS: 50
+    BATCH_PAUSE_MS: 200,   // Aumentado para dar tiempo al servidor
+    SOCKET_TIMEOUT: 60000, // 60 segundos
+    MAX_RETRIES: 3
   },
   
   // Para cargas medianas (10k-100k documentos)
   MEDIUM_LOAD: {
-    BATCH_SIZE: 100,
-    MAX_POOL_SIZE: 20,
-    MIN_POOL_SIZE: 5,
+    BATCH_SIZE: 75,
+    MAX_POOL_SIZE: 12,
+    MIN_POOL_SIZE: 4,
     WRITE_CONCERN: { w: 1, j: false },
-    BATCH_PAUSE_MS: 100
+    BATCH_PAUSE_MS: 150,
+    SOCKET_TIMEOUT: 45000,
+    MAX_RETRIES: 3
   },
   
   // Para cargas ligeras (<10k documentos)
   LIGHT_LOAD: {
-    BATCH_SIZE: 50,
+    BATCH_SIZE: 100,
     MAX_POOL_SIZE: 10,
     MIN_POOL_SIZE: 2,
     WRITE_CONCERN: { w: 1, j: true },
-    BATCH_PAUSE_MS: 200
+    BATCH_PAUSE_MS: 100,
+    SOCKET_TIMEOUT: 30000,
+    MAX_RETRIES: 2
   }
 };
 
@@ -995,17 +1001,18 @@ async function indexarMongo(dbName, collection) {
           maxPoolSize: optimalConfig.MAX_POOL_SIZE,
           minPoolSize: optimalConfig.MIN_POOL_SIZE,
           maxIdleTimeMS: 30000,      // Tiempo máximo inactivo
-          serverSelectionTimeoutMS: 5000,
-          socketTimeoutMS: 45000,
-          // bufferMaxEntries: 0,       // Deshabilitar buffering
+          serverSelectionTimeoutMS: 10000,  // Aumentado para conexiones lentas
+          socketTimeoutMS: optimalConfig.SOCKET_TIMEOUT,
+          connectTimeoutMS: 30000,   // Timeout de conexión
+          heartbeatFrequencyMS: 10000, // Heartbeat más frecuente
           retryWrites: true,
           writeConcern: optimalConfig.WRITE_CONCERN
       };
 
-      const optimizedClient = new MongoClient(uri, mongoOptions);
+      let optimizedClient = new MongoClient(uri, mongoOptions);
       await optimizedClient.connect();
       const db = optimizedClient.db(dbName);
-      const collectionDb = db.collection(collection);
+      let collectionDb = db.collection(collection);
 
       // OPTIMIZACIÓN 2: Crear índice para mejorar las consultas de duplicados
       try {
@@ -1030,22 +1037,44 @@ async function indexarMongo(dbName, collection) {
       let errorCount = 0;
       let movedCount = 0;
 
-      // OPTIMIZACIÓN 4: Procesamiento en lotes (bulk operations) - tamaño dinámico
-      const BATCH_SIZE = optimalConfig.BATCH_SIZE;
-      const archivosEnLotes = [];
+      // OPTIMIZACIÓN 4: Procesamiento en lotes (bulk operations) - tamaño inicial
+      const INITIAL_BATCH_SIZE = optimalConfig.BATCH_SIZE;
       
-      for (let i = 0; i < archivos.length; i += BATCH_SIZE) {
-          archivosEnLotes.push(archivos.slice(i, i + BATCH_SIZE));
+      // Crear lotes iniciales con tamaño estándar
+      const archivosEnLotes = [];
+      for (let i = 0; i < archivos.length; i += INITIAL_BATCH_SIZE) {
+          archivosEnLotes.push(archivos.slice(i, i + INITIAL_BATCH_SIZE));
       }
 
-      console.log(`🔄 Procesando en ${archivosEnLotes.length} lotes de máximo ${BATCH_SIZE} archivos`);
+      console.log(`🔄 Procesando en ${archivosEnLotes.length} lotes de máximo ${INITIAL_BATCH_SIZE} archivos (tamaño adaptativo)`);
 
       // Inicializar monitor de rendimiento
       const performanceMonitor = createPerformanceMonitor();
 
+      // OPTIMIZACIÓN ADICIONAL: Sistema de ajuste dinámico de lotes
+      let adaptiveBatchSize = optimalConfig.BATCH_SIZE;
+      let consecutiveTimeouts = 0;
+      let consecutiveSuccesses = 0;
+
       for (let loteIndex = 0; loteIndex < archivosEnLotes.length; loteIndex++) {
           const loteArchivos = archivosEnLotes[loteIndex];
           console.log(`\n📦 Procesando lote ${loteIndex + 1}/${archivosEnLotes.length} (${loteArchivos.length} archivos)`);
+
+          // Verificar salud de la conexión antes de cada lote
+          try {
+              await optimizedClient.db().admin().ping();
+          } catch (healthError) {
+              console.log('⚠️ Conexión no saludable, reconectando...');
+              try {
+                  await optimizedClient.close();
+              } catch (closeError) {
+                  // Ignorar errores al cerrar
+              }
+              optimizedClient = new MongoClient(uri, mongoOptions);
+              await optimizedClient.connect();
+              collectionDb = optimizedClient.db(dbName).collection(collection);
+              console.log('✅ Reconexión exitosa');
+          }
 
           // Arrays para operaciones bulk
           const bulkOperations = [];
@@ -1088,29 +1117,11 @@ async function indexarMongo(dbName, collection) {
               }
           }
 
-          // OPTIMIZACIÓN 5: Ejecutar bulk insert si hay operaciones
+          // OPTIMIZACIÓN 5: Ejecutar bulk insert con fallback automático
           if (bulkOperations.length > 0) {
-              try {
-                  console.log(`💾 Ejecutando bulk insert de ${bulkOperations.length} documentos...`);
-                  
-                  const bulkResult = await collectionDb.bulkWrite(bulkOperations, {
-                      ordered: false,  // Continuar aunque algunos fallen
-                      writeConcern: optimalConfig.WRITE_CONCERN
-                  });
-
-                  console.log(`✅ Bulk insert completado: ${bulkResult.insertedCount} insertados`);
-                  processedCount += bulkResult.insertedCount;
-
-                  // Si hay errores en el bulk, contarlos
-                  if (bulkResult.writeErrors && bulkResult.writeErrors.length > 0) {
-                      errorCount += bulkResult.writeErrors.length;
-                      console.log(`⚠️ Errores en bulk insert: ${bulkResult.writeErrors.length}`);
-                  }
-
-              } catch (bulkError) {
-                  console.error(`❌ Error en bulk insert:`, bulkError.message);
-                  errorCount += bulkOperations.length;
-              }
+              const bulkResult = await executeBulkWithFallback(collectionDb, bulkOperations, optimalConfig, loteIndex);
+              processedCount += bulkResult.insertedCount;
+              errorCount += bulkResult.errorCount;
           }
 
           // OPTIMIZACIÓN 6: Mover archivos en paralelo después del bulk insert
@@ -1219,3 +1230,83 @@ indexarMongo('buscadorDB', 'jurisprudencia');
 143.244.152.224
 157.230.236.157
 */
+
+/**
+ * Función auxiliar para dividir un lote grande en lotes más pequeños cuando hay timeouts
+ */
+async function executeBulkWithFallback(collectionDb, bulkOperations, optimalConfig, loteIndex) {
+    const maxRetries = optimalConfig.MAX_RETRIES;
+    let currentBatchSize = bulkOperations.length;
+    let operations = [...bulkOperations]; // Copia para no modificar el original
+    let totalInserted = 0;
+    let totalErrors = 0;
+
+    while (operations.length > 0 && currentBatchSize >= 1) {
+        const currentBatch = operations.splice(0, currentBatchSize);
+        let retryCount = 0;
+        let batchSuccess = false;
+
+        while (!batchSuccess && retryCount <= maxRetries) {
+            try {
+                const retryText = retryCount > 0 ? ` (Intento ${retryCount + 1}/${maxRetries + 1})` : '';
+                const sizeText = currentBatchSize !== bulkOperations.length ? ` [Lote reducido: ${currentBatchSize}]` : '';
+                console.log(`💾 Ejecutando bulk insert de ${currentBatch.length} documentos...${retryText}${sizeText}`);
+                
+                const bulkResult = await collectionDb.bulkWrite(currentBatch, {
+                    ordered: false,
+                    writeConcern: optimalConfig.WRITE_CONCERN
+                });
+
+                console.log(`✅ Bulk insert completado: ${bulkResult.insertedCount} insertados`);
+                totalInserted += bulkResult.insertedCount;
+
+                if (bulkResult.writeErrors && bulkResult.writeErrors.length > 0) {
+                    totalErrors += bulkResult.writeErrors.length;
+                    console.log(`⚠️ Errores en bulk insert: ${bulkResult.writeErrors.length}`);
+                }
+
+                batchSuccess = true;
+
+            } catch (bulkError) {
+                retryCount++;
+                const isTimeoutError = bulkError.message.includes('timed out') || 
+                                     bulkError.message.includes('timeout') ||
+                                     bulkError.code === 'ETIMEDOUT';
+
+                if (isTimeoutError) {
+                    if (retryCount <= maxRetries) {
+                        console.log(`⚠️ Timeout en lote ${loteIndex + 1} (intento ${retryCount}/${maxRetries + 1}): ${bulkError.message}`);
+                        console.log(`🔄 Reintentando en ${retryCount * 2}s...`);
+                        await new Promise(resolve => setTimeout(resolve, retryCount * 2000));
+                    } else {
+                        // Si agotamos los reintentos, reducir el tamaño del lote
+                        if (currentBatchSize > 10) {
+                            currentBatchSize = Math.max(10, Math.floor(currentBatchSize / 2));
+                            console.log(`🔄 Reduciendo tamaño de lote a ${currentBatchSize} documentos por timeout persistente`);
+                            
+                            // Volver a agregar el lote fallido al inicio de operations
+                            operations.unshift(...currentBatch);
+                            batchSuccess = true; // Salir del bucle de reintentos para probar con lote más pequeño
+                            retryCount = 0; // Resetear contador para el nuevo tamaño
+                        } else {
+                            console.error(`❌ Error definitivo después de ${retryCount} intentos con lote mínimo:`, bulkError.message);
+                            totalErrors += currentBatch.length;
+                            batchSuccess = true;
+                        }
+                    }
+                } else {
+                    console.error(`❌ Error no relacionado con timeout:`, bulkError.message);
+                    totalErrors += currentBatch.length;
+                    batchSuccess = true;
+                }
+            }
+        }
+
+        // Pausa pequeña entre sub-lotes si hay más operaciones pendientes
+        if (operations.length > 0) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+    }
+
+    return { insertedCount: totalInserted, errorCount: totalErrors };
+}
