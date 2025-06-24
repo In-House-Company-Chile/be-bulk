@@ -1064,16 +1064,26 @@ async function indexarMongo(dbName, collection) {
           try {
               await optimizedClient.db().admin().ping();
           } catch (healthError) {
-              console.log('⚠️ Conexión no saludable, reconectando...');
+              console.error(`❌ Error crítico de conexión en lote ${loteIndex + 1}:`, healthError.message);
+              console.error(`🛑 SERVICIO DETENIDO - No se puede establecer conexión con MongoDB`);
+              console.error(`📊 Resumen hasta el error:`);
+              console.error(`   ✅ Procesados exitosamente: ${processedCount}`);
+              console.error(`   ⚠️ Duplicados omitidos: ${duplicateCount}`);
+              console.error(`   ❌ Total errores: ${errorCount + 1}`);
+              console.error(`   📄 Lote con error de conexión: ${loteIndex + 1}/${archivosEnLotes.length}`);
+              
+              // Intentar cerrar conexión
               try {
                   await optimizedClient.close();
               } catch (closeError) {
                   // Ignorar errores al cerrar
               }
-              optimizedClient = new MongoClient(uri, mongoOptions);
-              await optimizedClient.connect();
-              collectionDb = optimizedClient.db(dbName).collection(collection);
-              console.log('✅ Reconexión exitosa');
+              
+              console.error(`🔌 Conexión MongoDB cerrada`);
+              console.error(`\n💡 Para reanudar: Verifique la conectividad con MongoDB y ejecute el servicio nuevamente`);
+              
+              // Terminar el proceso completamente
+              process.exit(1);
           }
 
           // Arrays para operaciones bulk
@@ -1112,8 +1122,22 @@ async function indexarMongo(dbName, collection) {
                   existingIds.add(jsonData.id.toString());
 
               } catch (error) {
-                  console.error(`❌ Error al procesar ${archivo}:`, error.message);
-                  errorCount++;
+                  console.error(`❌ Error crítico al procesar archivo ${archivo}:`, error.message);
+                  console.error(`🛑 SERVICIO DETENIDO - Error en procesamiento de archivo`);
+                  console.error(`📊 Resumen hasta el error:`);
+                  console.error(`   ✅ Procesados exitosamente: ${processedCount}`);
+                  console.error(`   ⚠️ Duplicados omitidos: ${duplicateCount}`);
+                  console.error(`   ❌ Total errores: ${errorCount + 1}`);
+                  console.error(`   📄 Archivo con error: ${archivo}`);
+                  console.error(`   📄 Lote actual: ${loteIndex + 1}/${archivosEnLotes.length}`);
+                  
+                  // Cerrar conexión y terminar
+                  await optimizedClient.close();
+                  console.error(`🔌 Conexión MongoDB cerrada`);
+                  console.error(`\n💡 Para reanudar: Revise el archivo ${archivo} y ejecute el servicio nuevamente`);
+                  
+                  // Terminar el proceso completamente
+                  process.exit(1);
               }
           }
 
@@ -1122,54 +1146,37 @@ async function indexarMongo(dbName, collection) {
               const bulkResult = await executeBulkWithFallback(collectionDb, bulkOperations, optimalConfig, loteIndex);
               processedCount += bulkResult.insertedCount;
               errorCount += bulkResult.errorCount;
+
+              // DETENER SERVICIO SI HAY ERRORES
+              if (bulkResult.errorCount > 0) {
+                  console.error(`\n🛑 SERVICIO DETENIDO - Se detectaron ${bulkResult.errorCount} errores en el lote ${loteIndex + 1}`);
+                  console.error(`❌ NO se moverán archivos a la carpeta success`);
+                  console.error(`📊 Resumen hasta el error:`);
+                  console.error(`   ✅ Procesados exitosamente: ${processedCount}`);
+                  console.error(`   ⚠️ Duplicados omitidos: ${duplicateCount}`);
+                  console.error(`   ❌ Total errores: ${errorCount}`);
+                  console.error(`   📄 Lote con error: ${loteIndex + 1}/${archivosEnLotes.length}`);
+                  console.error(`   📁 Archivos sin procesar: ${(archivosEnLotes.length - loteIndex - 1) * adaptiveBatchSize + (archivosEnLotes.length > 0 ? archivosEnLotes[archivosEnLotes.length - 1].length : 0)}`);
+                  
+                  // Cerrar conexión y terminar
+                  await optimizedClient.close();
+                  console.error(`🔌 Conexión MongoDB cerrada`);
+                  console.error(`\n💡 Para reanudar: Revise los errores y ejecute el servicio nuevamente`);
+                  
+                  // Terminar el proceso completamente
+                  process.exit(1);
+              }
           }
 
-          // OPTIMIZACIÓN 6: Mover archivos en paralelo después del bulk insert
-          const movePromises = [];
-          
-          // Mover archivos procesados exitosamente
-          for (const { archivo, rutaOrigen } of archivosParaMover) {
-              const rutaDestino = path.join(successDir, archivo);
-              movePromises.push(
-                  fs.promises.rename(rutaOrigen, rutaDestino)
-                      .then(() => {
-                          movedCount++;
-                          return `✅ ${archivo}`;
-                      })
-                      .catch(error => {
-                          console.error(`❌ Error moviendo ${archivo}:`, error.message);
-                          return `❌ ${archivo}`;
-                      })
-              );
-          }
-
-          // Mover archivos duplicados también
-          for (const { archivo, rutaOrigen } of archivosDuplicados) {
-              const rutaDestino = path.join(successDir, archivo);
-              movePromises.push(
-                  fs.promises.rename(rutaOrigen, rutaDestino)
-                      .then(() => {
-                          movedCount++;
-                          return `📦 ${archivo} (duplicado)`;
-                      })
-                      .catch(error => {
-                          console.error(`❌ Error moviendo duplicado ${archivo}:`, error.message);
-                          return `❌ ${archivo}`;
-                      })
-              );
-          }
-
-          // Ejecutar movimientos en paralelo
-          if (movePromises.length > 0) {
-              console.log(`📁 Moviendo ${movePromises.length} archivos a success...`);
-              await Promise.allSettled(movePromises);
-          }
+          // NOTA: Se ha eliminado el movimiento automático de archivos
+          // Los archivos solo se moverán al completar TODO el proceso sin errores
+          console.log(`📋 Lote ${loteIndex + 1} procesado (archivos permanecen en ubicación original hasta completar sin errores)`);
 
           // Progreso del lote con métricas de rendimiento
           console.log(`📊 Lote ${loteIndex + 1} completado:`);
           console.log(`   ✅ Procesados: ${bulkOperations.length}`);
           console.log(`   ⚠️ Duplicados: ${archivosDuplicados.length}`);
-          console.log(`   📁 Movidos: ${movePromises.length}`);
+          console.log(`   📁 Archivos en espera: ${archivosParaMover.length + archivosDuplicados.length}`);
           
           // Mostrar métricas de rendimiento
           performanceMonitor.logBatchPerformance(
@@ -1184,14 +1191,48 @@ async function indexarMongo(dbName, collection) {
           }
       }
 
+      // ¡PROCESO COMPLETADO SIN ERRORES! - Ahora mover todos los archivos
+      console.log(`\n🎉 ¡PROCESO COMPLETADO EXITOSAMENTE SIN ERRORES!`);
+      console.log(`📁 Moviendo TODOS los archivos a la carpeta success...`);
+      
+      let totalMovedCount = 0;
+      const allMovePromises = [];
+      
+      // Mover todos los archivos procesados
+      for (const archivo of archivos) {
+          const rutaOrigen = path.join(sentenciasDir, archivo);
+          const rutaDestino = path.join(successDir, archivo);
+          
+          // Solo mover si el archivo aún existe en la ubicación original
+          if (fs.existsSync(rutaOrigen)) {
+              allMovePromises.push(
+                  fs.promises.rename(rutaOrigen, rutaDestino)
+                      .then(() => {
+                          totalMovedCount++;
+                          return `✅ ${archivo}`;
+                      })
+                      .catch(error => {
+                          console.error(`❌ Error moviendo ${archivo}:`, error.message);
+                          return `❌ ${archivo}`;
+                      })
+              );
+          }
+      }
+      
+      if (allMovePromises.length > 0) {
+          console.log(`🔄 Moviendo ${allMovePromises.length} archivos...`);
+          await Promise.allSettled(allMovePromises);
+          console.log(`✅ ${totalMovedCount} archivos movidos exitosamente a success/`);
+      }
+
       // Resumen final con estadísticas de rendimiento
       const finalStats = performanceMonitor.getFinalStats(processedCount, errorCount, duplicateCount);
       
-      console.log(`\n🎉 Indexación en MongoDB completada:`);
+      console.log(`\n🎉 RESUMEN FINAL - Indexación en MongoDB completada:`);
       console.log(`   ✅ Procesadas exitosamente: ${processedCount}`);
       console.log(`   ⚠️ Duplicadas omitidas: ${duplicateCount}`);
       console.log(`   ❌ Errores: ${errorCount}`);
-      console.log(`   📦 Archivos movidos a success: ${movedCount}`);
+      console.log(`   📦 Archivos movidos a success: ${totalMovedCount}`);
       console.log(`   📊 Total archivos: ${archivos.length}`);
       console.log(`\n⚡ Estadísticas de rendimiento:`);
       console.log(`   ⏱️ Tiempo total: ${finalStats.totalTime}s`);
@@ -1215,7 +1256,23 @@ async function indexarMongo(dbName, collection) {
       console.log('🔌 Conexión MongoDB cerrada');
 
   } catch (e) {
+      console.error('\n🛑 ERROR CRÍTICO GENERAL - SERVICIO DETENIDO');
       console.error('❌ Error general al indexar sentencias en MongoDB:', e.message);
+      console.error('📊 Los archivos NO han sido movidos a la carpeta success');
+      console.error('💡 Para reanudar: Revise el error y ejecute el servicio nuevamente');
+      
+      // Intentar cerrar conexión si existe
+      try {
+          if (optimizedClient) {
+              await optimizedClient.close();
+              console.error('🔌 Conexión MongoDB cerrada');
+          }
+      } catch (closeError) {
+          // Ignorar errores al cerrar
+      }
+      
+      // Terminar el proceso
+      process.exit(1);
   }
 }
 
@@ -1290,12 +1347,14 @@ async function executeBulkWithFallback(collectionDb, bulkOperations, optimalConf
                             retryCount = 0; // Resetear contador para el nuevo tamaño
                         } else {
                             console.error(`❌ Error definitivo después de ${retryCount} intentos con lote mínimo:`, bulkError.message);
+                            console.error(`🛑 Este error causará la detención del servicio`);
                             totalErrors += currentBatch.length;
                             batchSuccess = true;
                         }
                     }
                 } else {
                     console.error(`❌ Error no relacionado con timeout:`, bulkError.message);
+                    console.error(`🛑 Este error causará la detención del servicio`);
                     totalErrors += currentBatch.length;
                     batchSuccess = true;
                 }
