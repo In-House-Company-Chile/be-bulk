@@ -997,7 +997,7 @@ async function indexarMongo(dbName, collection) {
           maxIdleTimeMS: 30000,      // Tiempo máximo inactivo
           serverSelectionTimeoutMS: 5000,
           socketTimeoutMS: 45000,
-          bufferMaxEntries: 0,       // Deshabilitar buffering
+          // bufferMaxEntries: 0,       // Deshabilitar buffering
           retryWrites: true,
           writeConcern: optimalConfig.WRITE_CONCERN
       };
