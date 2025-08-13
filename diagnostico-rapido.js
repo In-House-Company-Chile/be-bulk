@@ -20,14 +20,18 @@ async function diagnosticoRapido() {
   
   try {
     const start1 = performance.now();
-    const response1 = await http.get(EMBEDDING_URL.replace('/embed', '/'));
+    const response1 = await http.get(EMBEDDING_URL.replace('/embed', '/info'));
     const end1 = performance.now();
-    console.log(`   ✅ Embeddings: ${(end1 - start1).toFixed(2)}ms - ${response1.data.status || 'OK'}`);
+    console.log(`   ✅ Embeddings Info: ${(end1 - start1).toFixed(2)}ms`);
     
-    if (response1.data.model_loaded === false) {
-      console.log('   ⚠️  PROBLEMA: Modelo no cargado en GPU!');
-    }
-    if (response1.data.device !== 'cuda') {
+    const info = response1.data;
+    console.log(`   📋 Modelo: ${info.model_name}`);
+    console.log(`   🎮 GPU: ${info.gpu_name}`);
+    console.log(`   💾 VRAM: ${info.gpu_memory_allocated}/${info.gpu_memory_total}`);
+    console.log(`   ⚡ Device: ${info.device}`);
+    console.log(`   📦 Batch Size: ${info.batch_size}`);
+    
+    if (info.device !== 'cuda') {
       console.log('   ⚠️  PROBLEMA: No está usando CUDA!');
     }
   } catch (error) {
