@@ -1,0 +1,106 @@
+root@inhouse:~# nvidia-smi
+Wed Aug 13 19:08:27 2025
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 575.64.03              Driver Version: 575.64.03      CUDA Version: 12.9     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 3060        Off |   00000000:01:00.0  On |                  N/A |
+|  0%   46C    P8             20W /  170W |    1297MiB /  12288MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A         1432370      C   python3                                1284MiB |
++-----------------------------------------------------------------------------------------+
+root@inhouse:~# nvidia-smi pmon
+# gpu         pid   type     sm    mem    enc    dec    jpg    ofa    command
+# Idx           #    C/G      %      %      %      %      %      %    name
+    0    1432370     C      -      -      -      -      -      -    python3
+    0    1432370     C      -      -      -      -      -      -    python3
+^Croot@inhouse:~nvidia-smi --query-gpu=memory.total,memory.free,memory.used --format=csvsv
+memory.total [MiB], memory.free [MiB], memory.used [MiB]
+12288 MiB, 10610 MiB, 1297 MiB
+root@inhouse:~# watch -n 1 nvidia-smi --query-gpu=temperature.gpu,utilization.gpu,memory.used --format=csv,noheader,nounits
+root@inhouse:~# free -h
+               total        used        free      shared  buff/cache   available
+Mem:            30Gi       4,4Gi        12Gi        15Mi        13Gi        26Gi
+Swap:             0B          0B          0B
+root@inhouse:~# htop
+root@inhouse:~# lscpu | grep -E "Model name|CPU\(s\)|Thread"
+CPU(s):                               12
+On-line CPU(s) list:                  0-11
+Model name:                           AMD Ryzen 5 7600X 6-Core Processor
+BIOS Model name:                      AMD Ryzen 5 7600X 6-Core Processor              Unknown CPU @ 4.7GHz
+Thread(s) per core:                   2
+CPU(s) scaling MHz:                   33%
+NUMA node0 CPU(s):                    0-11
+root@inhouse:~# df -h
+Filesystem                         Size  Used Avail Use% Mounted on
+tmpfs                              3,1G  3,4M  3,1G   1% /run
+efivarfs                           128K   18K  106K  14% /sys/firmware/efi/efivars
+/dev/mapper/ubuntu--vg-ubuntu--lv   98G   64G   30G  69% /
+tmpfs                               16G     0   16G   0% /dev/shm
+tmpfs                              5,0M     0  5,0M   0% /run/lock
+/dev/sda2                          2,0G  193M  1,6G  11% /boot
+/dev/sda1                          1,1G  6,2M  1,1G   1% /boot/efi
+overlay                             98G   64G   30G  69% /var/lib/docker/overlay2/4f82319b2be83faac2d3058537587bbf9c9ba1e07f9b4f5388fddc2ac345d33d/merged
+overlay                             98G   64G   30G  69% /var/lib/docker/overlay2/57f273bc04586f98466a331a7cd09dd579cb9694a9aa2eceaa4ee426587ee6b3/merged
+tmpfs                               31G   12K   31G   1% /var/lib/kubelet/pods/5b702ae5-0a9c-4725-bc8a-d8550683eb6a/volumes/kubernetes.io~projected/kube-api-access-blzx9
+tmpfs                               31G   12K   31G   1% /var/lib/kubelet/pods/b247f607-b86b-4d7e-a805-a8f38d18185e/volumes/kubernetes.io~projected/kube-api-access-fkv5x
+tmpfs                               31G   12K   31G   1% /var/lib/kubelet/pods/1217c9dc-d529-4942-8734-6788eec45336/volumes/kubernetes.io~projected/kube-api-access-j9wrb
+shm                                 64M     0   64M   0% /run/containerd/io.containerd.grpc.v1.cri/sandboxes/abe3915695fbaba7a7faf94174ec77d18d130c0916039dec8b1ecb84ea4b022a/shm
+overlay                             98G   64G   30G  69% /run/containerd/io.containerd.runtime.v2.task/k8s.io/abe3915695fbaba7a7faf94174ec77d18d130c0916039dec8b1ecb84ea4b022a/rootfs
+shm                                 64M     0   64M   0% /run/containerd/io.containerd.grpc.v1.cri/sandboxes/c2630b5957e06077e0ab9516d0e9b2709645d5a1cbdcb18791993bedd11f44e1/shm
+overlay                             98G   64G   30G  69% /run/containerd/io.containerd.runtime.v2.task/k8s.io/c2630b5957e06077e0ab9516d0e9b2709645d5a1cbdcb18791993bedd11f44e1/rootfs
+overlay                             98G   64G   30G  69% /run/containerd/io.containerd.runtime.v2.task/k8s.io/23713ecd4b9332376950872b80b5812778ad490447edd878faf069211a4ab322/rootfs
+overlay                             98G   64G   30G  69% /run/containerd/io.containerd.runtime.v2.task/k8s.io/6c3fd5a6bd4728bef219ee5577a55a69308f93d8886899f66ea4e7a05d4067e9/rootfs
+shm                                 64M     0   64M   0% /run/containerd/io.containerd.grpc.v1.cri/sandboxes/59777942c86a6af0a63d70882509cb8cc16096af152c3bc46666559a7e42e242/shm
+overlay                             98G   64G   30G  69% /run/containerd/io.containerd.runtime.v2.task/k8s.io/59777942c86a6af0a63d70882509cb8cc16096af152c3bc46666559a7e42e242/rootfs
+overlay                             98G   64G   30G  69% /run/containerd/io.containerd.runtime.v2.task/k8s.io/b214d45c050cbea35fdaf068d139b163cda1d2dae544df4f775f6db8defac12b/rootfs
+tmpfs                              3,1G   20K  3,1G   1% /run/user/1000
+overlay                             98G   64G   30G  69% /var/lib/docker/overlay2/c9c759797190406292631889de81f6bae5dd7ff99bee9f27c315af7832c8b7ab/merged
+overlay                             98G   64G   30G  69% /var/lib/docker/overlay2/2baaf37d4c9a45a3b80912082a2a3d824e99dae521584151a085ea978e461c7b/merged
+root@inhouse:~# curl -s http://localhost:6333/collections | jq '.'
+{
+  "result": {
+    "collections": [
+      {
+        "name": "jurisprudencia"
+      },
+      {
+        "name": "test_jurisprudencia"
+      },
+      {
+        "name": "test_jurisprudencia_3"
+      },
+      {
+        "name": "test_jurisprudencia_2"
+      }
+    ]
+  },
+  "status": "ok",
+  "time": 0.000003497
+}
+root@inhouse:~# curl -s http://localhost:11441/health || curl -s http://localhost:11441/
+{"status":"healthy","model":"intfloat/multilingual-e5-large","device":"cuda","cuda_available":true,"model_loaded":true,"service_type":"direct_rtx3060","gpu_memory":"1.05 GB"}root@inhouse:~# netstat -tlnp | grep -netstat -tlnp | grep -E ":6333|:11441"
+tcp        0      0 0.0.0.0:11441           0.0.0.0:*               LISTEN      1432443/docker-prox
+tcp        0      0 0.0.0.0:6333            0.0.0.0:*               LISTEN      3097852/docker-prox
+tcp6       0      0 :::11441                :::*                    LISTEN      1432449/docker-prox
+tcp6       0      0 :::6333                 :::*                    LISTEN      3097859/docker-prox
+root@inhouse:~# time curl -s http://localhost:6333/collections >/dev/null
+
+real    0m0,005s
+user    0m0,002s
+sys     0m0,003s
+root@inhouse:~# time curl -s http://localhost:11441/ >/dev/null
+
+real    0m0,005s
+user    0m0,001s
+sys     0m0,003s
