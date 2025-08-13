@@ -492,7 +492,7 @@ class IndexarQdrant {
    */
   async moveToErrorFolder(sourceFilePath) {
     try {
-      const errorDir = 'C:\\Users\\kathe\\Desktop\\Leo\\sentencias\\error';
+      const errorDir = process.env.FOLDER_ERROR;
       
       // Crear la carpeta de errores si no existe
       if (!fs.existsSync(errorDir)) {

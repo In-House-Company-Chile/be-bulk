@@ -6,10 +6,10 @@ const { getConfiguracion, calcularRendimientoEstimado } = require('./configuraci
 const fs = require('fs');
 
 // Configuración
-const CARPETA_DOCUMENTOS = 'C:/Users/kathe/Desktop/Leo/sentencias/test';
+const CARPETA_DOCUMENTOS = process.env.FOLDER;
 // const CARPETA_DOCUMENTOS = 'C:/Users/kathe/Desktop/Leo/sentencias/ca_vm1_parte2/parte2';
-const COLECCION_QDRANT = 'test_jurisprudencia_2';
-const TIPO_BASE = 'corte_de_apelaciones';
+const COLECCION_QDRANT = process.env.QDRANT_COLLECTION;
+const TIPO_BASE = process.env.BASE_NAME;
 
 // Obtener configuración desde argumentos de línea de comandos
 const tipoConfiguracion = process.argv[2] || 'balanceada';
