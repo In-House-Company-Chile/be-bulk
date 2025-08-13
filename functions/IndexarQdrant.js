@@ -13,12 +13,26 @@ class IndexarQdrant {
     this.embeddingUrl = options.embeddingUrl || 'https://ms-vector.sandbox.governare.ai/embed';
     this.qdrantUrl = options.qdrantUrl || 'http://localhost:6333';
     
-    // Configuración
+    // Configuración OPTIMIZADA PARA RTX 3060
     this.vectorDimension = options.vectorDimension || 1024;
     this.chunkSize = options.chunkSize || 800;
     this.chunkOverlap = options.chunkOverlap || 80;
-    this.embeddingBatchSize = options.embeddingBatchSize || 32;
-    this.upsertBatchSize = options.upsertBatchSize || 100;
+    this.embeddingBatchSize = options.embeddingBatchSize || 128; // Aumentado para GPU
+    this.upsertBatchSize = options.upsertBatchSize || 500;       // Batches más grandes
+    this.maxConcurrentUpserts = options.maxConcurrentUpserts || 20; // Más concurrencia
+    
+    // Cliente HTTP optimizado para alta concurrencia
+    this.httpClient = require('axios').create({
+      timeout: 120000, // Timeout más largo
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+      httpAgent: new (require('http').Agent)({
+        keepAlive: true,
+        keepAliveMsecs: 1000,
+        maxSockets: 200,  // Más sockets
+        maxFreeSockets: 50
+      })
+    });
   }
 
   static create(doc, collectionName, metadata, options) {
@@ -76,12 +90,11 @@ class IndexarQdrant {
   // Obtener embeddings del servicio
   async getEmbedding(text) {
     try {
-      const response = await axios.post(
+      const response = await this.httpClient.post(
         this.embeddingUrl,
         { inputs: text },
         {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 30000
+          headers: { 'Content-Type': 'application/json' }
         }
       );
   
@@ -111,15 +124,14 @@ class IndexarQdrant {
     }
   }
 
-  // Obtener embeddings en lote
+  // Obtener embeddings en lote OPTIMIZADO
   async getEmbeddingsBatch(texts) {
     try {
-      const response = await axios.post(
+      const response = await this.httpClient.post(
         this.embeddingUrl,
         { inputs: texts }, // Array de textos
         {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 60000
+          headers: { 'Content-Type': 'application/json' }
         }
       );
   
@@ -151,15 +163,14 @@ class IndexarQdrant {
     }
   }
 
-  // Insertar puntos en Qdrant
+  // Insertar puntos en Qdrant OPTIMIZADO
   async upsertToQdrant(points) {
     try {
-      const response = await axios.put(
+      const response = await this.httpClient.put(
         `${this.qdrantUrl}/collections/${this.collectionName}/points`,
         { points },
         {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 30000
+          headers: { 'Content-Type': 'application/json' }
         }
       );
 
@@ -194,48 +205,39 @@ class IndexarQdrant {
       // Generar ID único para el documento
       const docId = this.metadata.idNorm || `doc_${uuidv4()}`;
       
-      // Procesar chunks en lotes
+      // PROCESAMIENTO ULTRA PARALELO CON RTX 3060
+      console.log(`🚀 Procesamiento ultra paralelo: ${this.embeddingBatchSize} chunks por batch`);
+      
+      const allPromises = [];
+      const batchPromises = [];
       let totalProcessed = 0;
       
+      // Crear todos los batches de embeddings en paralelo
       for (let i = 0; i < chunks.length; i += this.embeddingBatchSize) {
         const batchChunks = chunks.slice(i, i + this.embeddingBatchSize);
+        const batchIndex = Math.floor(i / this.embeddingBatchSize);
         
-        console.log(`\n🔄 Procesando lote ${Math.floor(i / this.embeddingBatchSize) + 1}...`);
+        const batchPromise = this.processBatchOptimized(batchChunks, docId, i, chunks.length, batchIndex);
+        batchPromises.push(batchPromise);
         
-        // Obtener embeddings para el lote
-        const embeddings = await this.getEmbeddingsBatch(batchChunks);
-        
-        // Preparar puntos para Qdrant
-        const points = batchChunks.map((chunk, idx) => ({
-          id: uuidv4(),
-          vector: embeddings[idx],
-          payload: {
-            ...this.metadata,
-            doc_id: docId,
-            text: chunk,
-            chunk_index: i + idx,
-            total_chunks: chunks.length,
-            timestamp: new Date().toISOString()
-          }
-        }));
-
-        // Insertar en Qdrant
-        await this.upsertToQdrant(points);
-        
-        totalProcessed += points.length;
-        
-        // Progreso
-        const progress = Math.round((totalProcessed / chunks.length) * 100);
-        console.log(`  ✓ Procesados ${totalProcessed}/${chunks.length} chunks (${progress}%)`);
-        
-        // Pequeña pausa para no sobrecargar los servicios
-        if (i + this.embeddingBatchSize < chunks.length) {
-          await new Promise(resolve => setTimeout(resolve, 10));
+        // Limitar concurrencia para no saturar la GPU
+        if (batchPromises.length >= 10) { // Máximo 10 batches paralelos
+          const results = await Promise.allSettled(batchPromises);
+          totalProcessed += this.processBatchResults(results);
+          batchPromises.length = 0; // Limpiar array
         }
       }
+      
+      // Procesar batches restantes
+      if (batchPromises.length > 0) {
+        const results = await Promise.allSettled(batchPromises);
+        totalProcessed += this.processBatchResults(results);
+      }
+      
+      console.log(`✅ Total chunks procesados: ${totalProcessed}/${chunks.length}`);
 
       // Verificar el conteo final
-      const collectionInfo = await axios.get(
+      const collectionInfo = await this.httpClient.get(
         `${this.qdrantUrl}/collections/${this.collectionName}`
       );
       
@@ -258,6 +260,79 @@ class IndexarQdrant {
       throw error;
     }
   }
+  
+  // Método optimizado para procesar un batch
+  async processBatchOptimized(batchChunks, docId, startIndex, totalChunks, batchIndex) {
+    try {
+      console.log(`🔄 Batch ${batchIndex + 1}: ${batchChunks.length} chunks`);
+      
+      // Obtener embeddings para el lote
+      const embeddings = await this.getEmbeddingsBatch(batchChunks);
+      
+      // Preparar puntos para Qdrant
+      const points = batchChunks.map((chunk, idx) => ({
+        id: uuidv4(),
+        vector: embeddings[idx],
+        payload: {
+          ...this.metadata,
+          doc_id: docId,
+          text: chunk,
+          chunk_index: startIndex + idx,
+          total_chunks: totalChunks,
+          timestamp: new Date().toISOString()
+        }
+      }));
+
+      // Insertar en Qdrant con batches más grandes
+      await this.upsertBatchParallel(points);
+      
+      return points.length;
+    } catch (error) {
+      console.error(`❌ Error en batch ${batchIndex}:`, error.message);
+      return 0;
+    }
+  }
+  
+  // Método para upsert paralelo en batches grandes
+  async upsertBatchParallel(points) {
+    const upsertPromises = [];
+    
+    for (let i = 0; i < points.length; i += this.upsertBatchSize) {
+      const batch = points.slice(i, i + this.upsertBatchSize);
+      
+      // Limitar upserts concurrentes
+      if (upsertPromises.length >= this.maxConcurrentUpserts) {
+        await Promise.race(upsertPromises.map((p, idx) => 
+          p.then(() => upsertPromises.splice(idx, 1))
+        ));
+      }
+      
+      const promise = this.upsertToQdrant(batch)
+        .catch(error => {
+          console.error(`❌ Error en upsert batch:`, error.message);
+          // Reintentar una vez
+          return this.upsertToQdrant(batch);
+        });
+      
+      upsertPromises.push(promise);
+    }
+    
+    // Esperar a que terminen todos los upserts
+    await Promise.all(upsertPromises);
+  }
+  
+  // Procesar resultados de batches
+  processBatchResults(results) {
+    let processed = 0;
+    results.forEach((result, idx) => {
+      if (result.status === 'fulfilled') {
+        processed += result.value;
+      } else {
+        console.error(`❌ Batch ${idx} falló:`, result.reason?.message);
+      }
+    });
+    return processed;
+  }
 
   // Método auxiliar para búsqueda (útil para testing)
   static async search(collectionName, queryText, options = {}) {
@@ -269,17 +344,28 @@ class IndexarQdrant {
     } = options;
 
     try {
+      // Cliente HTTP optimizado para búsqueda
+      const httpClient = require('axios').create({
+        timeout: 30000,
+        httpAgent: new (require('http').Agent)({
+          keepAlive: true,
+          maxSockets: 50
+        })
+      });
+      
       // Obtener embedding de la consulta
-      const response = await axios.post(
+      const response = await httpClient.post(
         embeddingUrl,
         { inputs: queryText },
         { headers: { 'Content-Type': 'application/json' } }
       );
 
-      const queryVector = response.data[0];
+      const queryVector = Array.isArray(response.data) && typeof response.data[0] === 'number' 
+        ? response.data 
+        : response.data[0];
 
       // Buscar en Qdrant
-      const searchResponse = await axios.post(
+      const searchResponse = await httpClient.post(
         `${qdrantUrl}/collections/${collectionName}/points/search`,
         {
           vector: queryVector,

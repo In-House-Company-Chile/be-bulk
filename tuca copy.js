@@ -13,21 +13,21 @@ const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION || 'jurisprudencia';
 const SENTENCIAS_DIR = process.env.SENTENCIAS_DIR;
 const VECTORIZED_DIR = process.env.VECTORIZED_DIR;
 
-// OPTIMIZACIÓN: Agentes HTTP más agresivos
+// OPTIMIZACIÓN ULTRA AGRESIVA: Agentes HTTP para RTX 3060
 const httpAgent = new http.Agent({
   keepAlive: true,
-  keepAliveMsecs: 1000,
-  maxSockets: 200, // Aumentado
-  maxFreeSockets: 50,
-  timeout: 60000,
+  keepAliveMsecs: 500,  // Reducido para más velocidad
+  maxSockets: 500,      // Aumentado agresivamente
+  maxFreeSockets: 100,  // Más sockets libres
+  timeout: 120000,      // Timeout más largo para batches grandes
 });
 
 const httpsAgent = new https.Agent({
   keepAlive: true,
-  keepAliveMsecs: 1000,
-  maxSockets: 200, // Aumentado
-  maxFreeSockets: 50,
-  timeout: 60000,
+  keepAliveMsecs: 500,
+  maxSockets: 500,
+  maxFreeSockets: 100,
+  timeout: 120000,
 });
 
 // Configurar axios globalmente
@@ -41,13 +41,15 @@ const config = {
   }
 };
 
-// OPTIMIZACIÓN AGRESIVA: Aumentar paralelización significativamente
+// OPTIMIZACIÓN ULTRA AGRESIVA PARA RTX 3060 12GB VRAM + 32GB RAM
 const PARALLELIZATION_CONFIG = {
-  MAX_CONCURRENT_DOCS: 20,       // Aumentado de 3 a 20
-  MAX_CONCURRENT_EMBEDDINGS: 50, // Aumentado de 10 a 50
-  EMBEDDING_BATCH_SIZE: 32,      // Aumentado para aprovechar el batch size de la GPU
+  MAX_CONCURRENT_DOCS: 50,        // Aumentado agresivamente para 32GB RAM
+  MAX_CONCURRENT_EMBEDDINGS: 100, // Aumentado para aprovechar 12GB VRAM
+  EMBEDDING_BATCH_SIZE: 128,      // Batch mucho más grande para GPU
   EMBEDDING_API_URL: process.env.EMBEDDING_API_URL || 'http://localhost:11441/embed',
-  TARGET_DIMENSION: 1024
+  TARGET_DIMENSION: 1024,
+  QDRANT_BATCH_SIZE: 500,         // Batches más grandes para Qdrant
+  MAX_CONCURRENT_QDRANT_UPSERTS: 20 // Más upserts paralelos
 };
 
 /**
@@ -194,47 +196,38 @@ function createMetadataByType(jsonData, tipoBase) {
   }
 }
 
-// OPTIMIZACIÓN: Configuraciones más agresivas
-const MONGO_OPTIMIZATION_CONFIGS = {
+// OPTIMIZACIÓN ULTRA AGRESIVA PARA HARDWARE POTENTE
+const OPTIMIZATION_CONFIGS = {
   HEAVY_LOAD: {
-    BATCH_SIZE: 200,  // Aumentado significativamente
-    MAX_POOL_SIZE: 20,
-    MIN_POOL_SIZE: 10,
-    WRITE_CONCERN: { w: 0 }, // Fire and forget para máxima velocidad
-    BATCH_PAUSE_MS: 50,     // Reducido
-    SOCKET_TIMEOUT: 60000,
-    MAX_RETRIES: 2
+    BATCH_SIZE: 500,  // Aumentado agresivamente para 32GB RAM
+    BATCH_PAUSE_MS: 10,     // Pausa mínima
+    SOCKET_TIMEOUT: 120000, // Timeout más largo para batches grandes
+    MAX_RETRIES: 3
   },
   MEDIUM_LOAD: {
-    BATCH_SIZE: 150,
-    MAX_POOL_SIZE: 15,
-    MIN_POOL_SIZE: 8,
-    WRITE_CONCERN: { w: 0 },
-    BATCH_PAUSE_MS: 75,
-    SOCKET_TIMEOUT: 45000,
-    MAX_RETRIES: 2
+    BATCH_SIZE: 300,
+    BATCH_PAUSE_MS: 25,
+    SOCKET_TIMEOUT: 90000,
+    MAX_RETRIES: 3
   },
   LIGHT_LOAD: {
-    BATCH_SIZE: 100,
-    MAX_POOL_SIZE: 10,
-    MIN_POOL_SIZE: 5,
-    WRITE_CONCERN: { w: 1, j: false },
-    BATCH_PAUSE_MS: 100,
-    SOCKET_TIMEOUT: 30000,
+    BATCH_SIZE: 200,
+    BATCH_PAUSE_MS: 50,
+    SOCKET_TIMEOUT: 60000,
     MAX_RETRIES: 2
   }
 };
 
 function getOptimalConfig(totalFiles) {
-  if (totalFiles > 100000) {
-    console.log('🔥 Configuración HEAVY_LOAD detectada (>100k archivos)');
-    return MONGO_OPTIMIZATION_CONFIGS.HEAVY_LOAD;
-  } else if (totalFiles > 10000) {
-    console.log('⚡ Configuración MEDIUM_LOAD detectada (10k-100k archivos)');
-    return MONGO_OPTIMIZATION_CONFIGS.MEDIUM_LOAD;
+  if (totalFiles > 10000) {
+    console.log('🔥 Configuración HEAVY_LOAD detectada (>10k archivos) - RTX 3060 Mode');
+    return OPTIMIZATION_CONFIGS.HEAVY_LOAD;
+  } else if (totalFiles > 1000) {
+    console.log('⚡ Configuración MEDIUM_LOAD detectada (1k-10k archivos) - RTX 3060 Mode');
+    return OPTIMIZATION_CONFIGS.MEDIUM_LOAD;
   } else {
-    console.log('💡 Configuración LIGHT_LOAD detectada (<10k archivos)');
-    return MONGO_OPTIMIZATION_CONFIGS.LIGHT_LOAD;
+    console.log('💡 Configuración LIGHT_LOAD detectada (<1k archivos) - RTX 3060 Mode');
+    return OPTIMIZATION_CONFIGS.LIGHT_LOAD;
   }
 }
 
@@ -395,7 +388,9 @@ async function processWorker(queue, cacheManager, results, BASE_NAME) {
           embeddingBatchSize: PARALLELIZATION_CONFIG.EMBEDDING_BATCH_SIZE,
           embeddingUrl: PARALLELIZATION_CONFIG.EMBEDDING_API_URL,
           qdrantUrl: config.QDRANT.URL,
-          vectorDimension: PARALLELIZATION_CONFIG.TARGET_DIMENSION
+          vectorDimension: PARALLELIZATION_CONFIG.TARGET_DIMENSION,
+          upsertBatchSize: PARALLELIZATION_CONFIG.QDRANT_BATCH_SIZE,
+          maxConcurrentUpserts: PARALLELIZATION_CONFIG.MAX_CONCURRENT_QDRANT_UPSERTS
         }
       );
 
