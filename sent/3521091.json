@@ -1,0 +1,61 @@
+{
+  "gls_sala_sup_s": "TERCERA, CONSTITUCIONAL",
+  "fec_sentencia_sup_dt": "2020-05-28T00:00:00Z",
+  "gls_corte_s": "C.A. de Santiago",
+  "sent__flg_reservado_i": 0,
+  "cod_corte_i": 90,
+  "sent__flg_reservado_materia_i": 0,
+  "id_sala_sup_i": 3,
+  "rol_era_sup_s": "59643-2020",
+  "organismo_ss": [
+    "Isapre Nueva Masvida S.A."
+  ],
+  "id_instancia": 11,
+  "era_sup_i": 2020,
+  "caratulado_s": "ANONIMIZADO",
+  "cod_libro_sup_s": "1",
+  "crr_documento_id_i": 3521091,
+  "resultado_recurso_sup_s": "CONFIRMA SENTENCIA APELADA",
+  "id": "3521091",
+  "rol_era_ape_s": "9736-2020",
+  "era_juz_i": 1900,
+  "cod_libro_corte_i": 34,
+  "tamano_archivo_i": 23552,
+  "gls_tip_recurso_sup_s": "(CIVIL) APELACIÓN PROTECCIÓN",
+  "id_tip_recurso_sup_s": "CV03",
+  "sent__flg_reserva_termino_i": 0,
+  "gls_libro_sup_s": "Civil",
+  "cod_juz_i": 0,
+  "sent__rol_corte_i": 9736,
+  "era_corte_i": 2020,
+  "rol_juz_i": 0,
+  "rol_sup_i": 59643,
+  "sent__creator_s": "Digitadora Tercera Sala",
+  "sent__creatortool_s": "Writer",
+  "sent__lang_s": "en-US",
+  "sent__author_s": "Digitadora Tercera Sala",
+  "sent__NPAGE_DOC_i": 1,
+  "sent__producer_s": "LibreOffice 7.4",
+  "sent__format_s": "application/pdf; version=1.6",
+  "texto_sentencia": "<br/>Santiago, veintiocho de mayo de dos mil veinte.<br/>Al escrito folio N° 80.763-2020: a lo principal,téngase presente; al otrosí, no ha lugar a los alegatossolicitados.<br/>Vistos:<br/>Se confirma la sentencia apelada de fecha seis de mayode dos mil veinte.<br/>Regístrese y devuélvase.<br/>Rol Nº 59.643-2020.<br/>Pronunciado por la Tercera Sala de esta Corte Supremaintegrada por los Ministros (a) Sr. Sergio Muñoz G., Sra.<br/>María Eugenia Sandoval G., y Sra. Ángela Vivanco M., y los<br/>Abogados Integrantes Sr. Rafael Gómez B., y Sr. Ricardo<br/>Abuauad D. No firman, no obstante haber concurrido alacuerdo de la causa, los Abogados Integrantes Sr. Gómez y<br/>Sr. Abuauad por estar ausentes. Santiago, 28 de mayo de2020.<br/>",
+  "texto_sentencia_preview": "<br/>Santiago, veintiocho de mayo de dos mil veinte.<br/>Al escrito folio N° 80.763-2020: a lo principal,téngase presente; al otrosí, no ha lugar a los alegatossolicitados.<br/>Vistos:<br/>Se confirma la sentencia apelada de fecha seis de mayode dos mil veinte.<br/>Regístrese y devuélvase.<br/>Rol Nº 59.643-2020.<br/>Pronunciado por la Tercera Sala de esta Corte Supremaintegrada por los Ministros (a) Sr. Sergio Muñoz G., Sra.<br/>María Eugenia Sandoval G., y Sra. Ángela Vivanco M., y los<br/>Abogados Integrantes Sr. Rafael Gómez B., y Sr. Ricardo<br/>Abuauad D. No firman, no obstante haber concurrido alacuerdo de la causa, los Abogados Integrantes Sr. Gómez y<br/>Sr. Abuauad por estar ausentes. Santiago, 28 de mayo de2020.<br/>",
+  "tipo_archivo_s": "application/pdf",
+  "texto_sentencia_anon": "\nSantiago, veintiocho de mayo de dos mil veinte.\nAl  escrito  folio  N°  80.763-2020:  a  lo  principal,téngase presente; al otrosí, no ha lugar a los alegatossolicitados. \nVistos:\nSe confirma la sentencia apelada de fecha seis de mayode dos mil veinte.\nRegístrese y devuélvase. \nRol Nº 59.643-2020. \nPronunciado  por  la  Tercera  Sala  de  esta  Corte  Supremaintegrada por los Ministros (a) Sr. Sergio Muñoz G., Sra.\nMaría Eugenia Sandoval G., y Sra. Ángela Vivanco M., y los\nAbogados  Integrantes  Sr.  Rafael  Gómez  B.,  y  Sr.  Ricardo\nAbuauad  D.  No  firman,  no  obstante  haber  concurrido  alacuerdo de la causa, los Abogados Integrantes Sr.  Gómez y\nSr.  Abuauad por estar ausentes. Santiago, 28 de mayo de2020.\n",
+  "texto_sentencia_anon_preview": "\nSantiago, veintiocho de mayo de dos mil veinte.\nAl  escrito  folio  N°  80.763-2020:  a  lo  principal,téngase presente; al otrosí, no ha lugar a los alegatossolicitados. \nVistos:\nSe confirma la sentencia apelada de fecha seis de mayode dos mil veinte.\nRegístrese y devuélvase. \nRol Nº 59.643-2020. \nPronunciado  por  la  Tercera  Sala  de  esta  Corte  Supremaintegrada por los Ministros (a) Sr. Sergio Muñoz G., Sra.\nMaría Eugenia Sandoval G., y Sra. Ángela Vivanco M., y los\nAbogados  Integrantes  Sr.  Rafael  Gómez  B.,  y  Sr.  Ricardo\nAbuauad  D.  No  firman,  no  obstante  haber  concurrido  alacuerdo de la causa, los Abogados Integrantes Sr.  Gómez y\nSr.  Abuauad por estar ausentes. Santiago, 28 de mayo de2020.\n",
+  "sent__tipo_archivo_anon_s": "application/pdf",
+  "tematica_ss": [
+    "Medicamentos de alto costo"
+  ],
+  "enfermedad_ss": [
+    "Deficiencia de la proteína alfa-1 antitripsina"
+  ],
+  "medicamento_ss": [
+    "Prolastin C"
+  ],
+  "_version_": 1836117414835650600,
+  "url_acceso_sentencia": "https://juris.pjud.cl/busqueda/pagina_detalle_sentencia/?k=bGhCdFRKUCtEbVQwVUlLZXhpN2t1QT09",
+  "url_corta_acceso_sentencia": "https://juris.pjud.cl/busqueda/u?diit9",
+  "TEXTO_ETIQUETADO_t": null,
+  "cita_bibliografica": "ANONIMIZADO: 28-05-2020 ((CIVIL) APELACIÓN PROTECCIÓN), Rol N° 59643-2020. En Compendio de Salud de Corte Suprema (https://juris.pjud.cl/busqueda/u?diit9). Fecha de consulta: 27-06-2025",
+  "id_obj_sentencia_guardada": ""
+}

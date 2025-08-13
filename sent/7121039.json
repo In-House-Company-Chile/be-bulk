@@ -1,0 +1,61 @@
+{
+  "gls_sala_sup_s": "TERCERA, CONSTITUCIONAL",
+  "fec_sentencia_sup_dt": "2023-12-15T00:00:00Z",
+  "gls_corte_s": "C.A. de Talca",
+  "sent__flg_reservado_i": 0,
+  "cod_corte_i": 40,
+  "sent__flg_reservado_materia_i": 0,
+  "id_sala_sup_i": 3,
+  "rol_era_sup_s": "250816-2023",
+  "organismo_ss": [
+    "Fonasa"
+  ],
+  "id_instancia": 11,
+  "era_sup_i": 2023,
+  "caratulado_s": "ANONIMIZADO",
+  "cod_libro_sup_s": "1",
+  "crr_documento_id_i": 7121039,
+  "resultado_recurso_sup_s": "CONFIRMA SENTENCIA APELADA",
+  "id": "7121039",
+  "rol_era_ape_s": "522-2023",
+  "era_juz_i": 1900,
+  "cod_libro_corte_i": 34,
+  "tamano_archivo_i": 26112,
+  "gls_tip_recurso_sup_s": "(CIVIL) APELACIÓN PROTECCIÓN",
+  "id_tip_recurso_sup_s": "CV03",
+  "sent__flg_reserva_termino_i": 0,
+  "gls_libro_sup_s": "Civil",
+  "cod_juz_i": 0,
+  "sent__rol_corte_i": 522,
+  "era_corte_i": 2023,
+  "rol_juz_i": 0,
+  "rol_sup_i": 250816,
+  "sent__creator_s": "Sala 03 Corte Suprema",
+  "sent__creatortool_s": "Writer",
+  "sent__lang_s": "en-US",
+  "sent__author_s": "Sala 03 Corte Suprema",
+  "sent__NPAGE_DOC_i": 3,
+  "sent__producer_s": "LibreOffice 7.4",
+  "sent__format_s": "application/pdf; version=1.6",
+  "texto_sentencia": "<br/>Santiago, quince de diciembre de dos mil veintitrés.<br/>Vistos:<br/>Previa sustitución en el párrafo sexto del considerandosexto de la expresión “DEA” por “FDA”, y teniendoespecialmente presente lo informado, con fecha 14 dediciembre de 2023 a requerimiento de esta Corte, por elmédico tratante Andrés Ehrmantraut Nogales, neurólogoinfantil del Hospital San Juan de Dios de Curicó, se confirmala sentencia apelada de veintinueve de noviembre de dos milveintitrés.<br/>Acordada con el voto en contra del abogado integrante<br/>Sr. Ruz L., quien estuvo por revocar la sentencia apelada, yrechazar el recurso de protección, teniendo para ellopresente:1. Que la administración del medicamento Zolgensma, nose encuentra entre las prescripciones que el Fondo Nacionalde Salud establece como parte de aquellos tratamientosincorporados a las Garantías Explícitas en Salud, ni ha sidoautorizado en alguno de los programas extraordinarios decobertura para medicamentos de alto costo, como losestablecidos en la Ley N.° 20.850, que Crea un Sistema de<br/>Protección Financiera para Diagnósticos y Tratamientos de<br/>Alto Costo y en la Cobertura Adicional de Enfermedades<br/>Catastróficas.2. Que el hecho de que, el medicamento aludido no seencuentre actualmente incorporado en alguno de los mecanismosde financiamiento que contempla nuestro sistema de saludpúblico ni esté priorizado, constituye una decisión depolítica pública de salud que apunta a solucionesestructurales cuya pretensión es guiada no solamente porrazones presupuestarias sino con miras a solucionar en elcontexto de limitados recursos públicos el mayor número decasos, de similares características al de autos, existentesen la comunidad en cumplimiento del deber del Estado de“promover el bien común”, decisión que, por cierto, ha sidodeterminada con arreglo a parámetros objetivos y técnicos, enque la evidencia científica que apoya su eficacia ocupa unrol importante y ha permitido de forma progresiva, lainclusión y el financiamiento de variados medicamentos dealto costo y prestaciones de salud asociadas. 3. Que, como se ha señalado con anterioridad en otrasdisidencias, esta es, precisamente, la política que, enmateria de prescripción de medicamentos de alto costorecomienda desde el año 2016 la Organización Mundial de la<br/>Salud, en el documento “El acceso y uso racional de losmedicamentos y otras tecnologías sanitarias estratégicas y dealto costo”, aprobado en la 55° del Consejo Directivo y 68.a<br/>Sesión del Comité Regional de la OMS para las Américas.<br/>Allí se establece que el aseguramiento a las personas ya la comunidad del “acceso a medicamentos seguros,asequibles, eficaces y de calidad a fin de evitardificultades económicas, el empobrecimiento o la exposición agastos catastróficos, especialmente en el caso de los gruposen condiciones de vulnerabilidad”, debe realizarse mediante“la adopción por los países de una lista explícita demedicamentos y otras tecnologías sanitarias que se base enlos criterios establecidos por la OMS para la adopción delistas de medicamentos esenciales, que aborde las prioridadesfundamentales y que se evalúe, revise o amplíeprogresivamente cuando corresponda y mediante criterios deeficacia, seguridad y costo-efectividad puede promover laeficiencia y la equidad”.4. Que, en consecuencia, a juicio de este disidente, nose está ante una negativa de cobertura que pueda calificarsede ilegal o arbitraria, por ser abusiva, caprichosa o carentede fundamento, requisito fundamental para otorgar laprotección que establece el art. 19, N.° 20, de la<br/>Constitución Política de la República.<br/>Regístrese y devuélvase.<br/>Rol N°250.816-2023.-<br/>",
+  "texto_sentencia_preview": "<br/>Santiago, quince de diciembre de dos mil veintitrés.<br/>Vistos:<br/>Previa sustitución en el párrafo sexto del considerandosexto de la expresión “DEA” por “FDA”, y teniendoespecialmente presente lo informado, con fecha 14 dediciembre de 2023 a requerimiento de esta Corte, por elmédico tratante Andrés Ehrmantraut Nogales, neurólogoinfantil del Hospital San Juan de Dios de Curicó, se confirmala sentencia apelada de veintinueve de noviembre de dos milveintitrés.<br/>Acordada con el voto en contra del abogado integrante<br/>Sr. Ruz L., quien estuvo por revocar la sentencia apelada, yrechazar el recurso de protección, teniendo para ellopresente:1. Que la administración del medicamento Zolgensma, nose encuentra entre las prescripciones que el Fondo Nacionalde Salud establece como parte de aquellos tratamientosincorporados a las Garantías Explícitas en Salud, ni ha sidoautorizado en alguno de los programas extraordinarios deco",
+  "tipo_archivo_s": "application/pdf",
+  "texto_sentencia_anon": "\nSantiago, quince de diciembre de dos mil veintitrés.\nVistos:\nPrevia sustitución en el párrafo sexto del considerandosexto  de  la  expresión  “DEA”  por  “FDA”,  y  teniendoespecialmente  presente  lo  informado,  con  fecha  14  dediciembre  de  2023  a  requerimiento  de  esta  Corte,  por  elmédico  tratante  Andrés  Ehrmantraut  Nogales,  neurólogoinfantil del Hospital San Juan de Dios de Curicó, se confirmala sentencia apelada de veintinueve de noviembre de dos milveintitrés.\nAcordada con el voto en contra del abogado integrante\nSr. Ruz L., quien estuvo por revocar la sentencia apelada, yrechazar  el  recurso  de  protección,  teniendo  para  ellopresente:1. Que la administración del medicamento Zolgensma, nose encuentra entre las prescripciones que el Fondo Nacionalde  Salud  establece  como  parte  de  aquellos  tratamientosincorporados a las Garantías Explícitas en Salud, ni ha sidoautorizado  en  alguno  de  los  programas  extraordinarios  decobertura  para  medicamentos  de  alto  costo,  como  losestablecidos en la Ley N.° 20.850, que Crea un Sistema de\nProtección  Financiera  para  Diagnósticos  y  Tratamientos  de\nAlto  Costo  y  en  la  Cobertura  Adicional  de  Enfermedades\nCatastróficas.2. Que el hecho de que, el medicamento aludido no seencuentre actualmente incorporado en alguno de los mecanismosde  financiamiento  que  contempla  nuestro  sistema  de  saludpúblico  ni  esté  priorizado,  constituye  una  decisión  depolítica  pública  de  salud  que  apunta  a  solucionesestructurales  cuya  pretensión  es  guiada  no  solamente  porrazones presupuestarias sino con miras a solucionar en elcontexto de limitados recursos públicos el mayor número decasos, de similares características al de autos, existentesen la comunidad  en cumplimiento del deber del Estado de“promover el bien común”, decisión que, por cierto, ha sidodeterminada con arreglo a parámetros objetivos y técnicos, enque la evidencia científica que apoya su eficacia ocupa unrol  importante  y  ha  permitido  de  forma  progresiva,  lainclusión  y  el  financiamiento  de  variados  medicamentos  dealto costo y prestaciones de salud asociadas. 3. Que, como se ha señalado con anterioridad en otrasdisidencias,  esta  es,  precisamente,  la  política  que,  enmateria  de  prescripción  de  medicamentos  de  alto  costorecomienda desde el año 2016 la Organización Mundial de la\nSalud,  en  el  documento  “El  acceso  y  uso  racional  de  losmedicamentos y otras tecnologías sanitarias estratégicas y dealto costo”, aprobado en la 55° del Consejo Directivo y 68.a\nSesión del Comité Regional de la OMS para las Américas.\nAllí se establece que el aseguramiento a las personas ya  la  comunidad  del  “acceso  a  medicamentos  seguros,asequibles,  eficaces  y  de  calidad  a  fin  de  evitardificultades económicas, el empobrecimiento o la exposición agastos catastróficos, especialmente en el caso de los gruposen condiciones de vulnerabilidad”, debe realizarse mediante“la  adopción  por  los  países  de  una  lista  explícita  demedicamentos y otras tecnologías sanitarias que se base enlos criterios establecidos por la OMS para la adopción delistas de medicamentos esenciales, que aborde las prioridadesfundamentales  y  que  se  evalúe,  revise  o  amplíeprogresivamente cuando corresponda y mediante criterios deeficacia,  seguridad  y  costo-efectividad  puede  promover  laeficiencia y la equidad”.4. Que, en consecuencia, a juicio de este disidente, nose está ante una negativa de cobertura que pueda calificarsede ilegal o arbitraria, por ser abusiva, caprichosa o carentede  fundamento,  requisito  fundamental  para  otorgar  laprotección  que  establece  el  art.  19,  N.°  20,  de  la\nConstitución Política de la República.\nRegístrese y devuélvase.\nRol N°250.816-2023.-\n",
+  "texto_sentencia_anon_preview": "\nSantiago, quince de diciembre de dos mil veintitrés.\nVistos:\nPrevia sustitución en el párrafo sexto del considerandosexto  de  la  expresión  “DEA”  por  “FDA”,  y  teniendoespecialmente  presente  lo  informado,  con  fecha  14  dediciembre  de  2023  a  requerimiento  de  esta  Corte,  por  elmédico  tratante  Andrés  Ehrmantraut  Nogales,  neurólogoinfantil del Hospital San Juan de Dios de Curicó, se confirmala sentencia apelada de veintinueve de noviembre de dos milveintitrés.\nAcordada con el voto en contra del abogado integrante\nSr. Ruz L., quien estuvo por revocar la sentencia apelada, yrechazar  el  recurso  de  protección,  teniendo  para  ellopresente:1. Que la administración del medicamento Zolgensma, nose encuentra entre las prescripciones que el Fondo Nacionalde  Salud  establece  como  parte  de  aquellos  tratamientosincorporados a las Garantías Explícitas en Salud, ni ha sidoautorizado  en  alguno  de  los  programas  extraordinarios  deco",
+  "sent__tipo_archivo_anon_s": "application/pdf",
+  "tematica_ss": [
+    "Medicamentos de alto costo"
+  ],
+  "enfermedad_ss": [
+    "Atrofia muscular espinal (AME) tipo I"
+  ],
+  "medicamento_ss": [
+    "Zolgensma"
+  ],
+  "_version_": 1836117419694751700,
+  "url_acceso_sentencia": "https://juris.pjud.cl/busqueda/pagina_detalle_sentencia/?k=Rlh3RnF1MFg3c2hBUUM1UytsMEg2Zz09",
+  "url_corta_acceso_sentencia": "https://juris.pjud.cl/busqueda/u?digwz",
+  "TEXTO_ETIQUETADO_t": null,
+  "cita_bibliografica": "ANONIMIZADO: 15-12-2023 ((CIVIL) APELACIÓN PROTECCIÓN), Rol N° 250816-2023. En Compendio de Salud de Corte Suprema (https://juris.pjud.cl/busqueda/u?digwz). Fecha de consulta: 27-06-2025",
+  "id_obj_sentencia_guardada": ""
+}

@@ -1,0 +1,62 @@
+{
+  "gls_sala_sup_s": "TERCERA, CONSTITUCIONAL",
+  "fec_sentencia_sup_dt": "2023-11-13T00:00:00Z",
+  "gls_corte_s": "C.A. de Santiago",
+  "sent__flg_reservado_i": 0,
+  "cod_corte_i": 90,
+  "sent__flg_reservado_materia_i": 0,
+  "id_sala_sup_i": 3,
+  "rol_era_sup_s": "236703-2023",
+  "organismo_ss": [
+    "Fonasa",
+    "Ministerio de Salud"
+  ],
+  "id_instancia": 11,
+  "era_sup_i": 2023,
+  "caratulado_s": "ANONIMIZADO",
+  "cod_libro_sup_s": "1",
+  "crr_documento_id_i": 6844187,
+  "resultado_recurso_sup_s": "CONFIRMA SENTENCIA APELADA (M)",
+  "id": "6844187",
+  "rol_era_ape_s": "11087-2023",
+  "era_juz_i": 1900,
+  "cod_libro_corte_i": 34,
+  "tamano_archivo_i": 25088,
+  "gls_tip_recurso_sup_s": "(CIVIL) APELACIÓN PROTECCIÓN",
+  "id_tip_recurso_sup_s": "CV03",
+  "sent__flg_reserva_termino_i": 0,
+  "gls_libro_sup_s": "Civil",
+  "cod_juz_i": 0,
+  "sent__rol_corte_i": 11087,
+  "era_corte_i": 2023,
+  "rol_juz_i": 0,
+  "rol_sup_i": 236703,
+  "sent__creator_s": "Cesar Ariel Inostroza Carcamo",
+  "sent__creatortool_s": "Writer",
+  "sent__lang_s": "en-US",
+  "sent__author_s": "Cesar Ariel Inostroza Carcamo",
+  "sent__NPAGE_DOC_i": 3,
+  "sent__producer_s": "LibreOffice 7.4",
+  "sent__format_s": "application/pdf; version=1.6",
+  "texto_sentencia": "<br/>Santiago, trece de noviembre de dos mil veintitrés.<br/>Vistos:<br/>Se confirma la sentencia apelada de fecha dos de octubrede dos mil veintitrés.<br/>Acordada con el voto en contra del ministro señor Matusy del ministro (S) señor Muñoz Pardo, quienes estuvieron porrevocar la sentencia apelada, rechazar el recurso deprotección, teniendo presente:1. Que la administración del medicamento ETEPLIRSEN(Exondys 51), no se encuentra entre las prescripciones que el<br/>Fondo Nacional de Salud establece como parte de aquellostratamientos incorporados a las Garantías Explícitas en<br/>Salud, ni ha sido autorizada en alguno de los programasextraordinarios de cobertura para medicamentos de alto costo,como los establecidos en la Ley N.° 20.850, que Crea un<br/>Sistema de Protección Financiera para Diagnósticos y<br/>Tratamientos de Alto Costo y en la Cobertura Adicional de<br/>Enfermedades Catastróficas.2. Que el hecho de que, en ciertos casos, no exista ladisponibilidad de ciertos medicamentos de alto costo para unpaciente determinado, no importa la obligación estatal o delos servicios de salud de proveerlos, si ello no ha sidoaprobado por las instituciones de salud de la República,después de un análisis científico riguroso que considere nosolo sus efectos individuales, sino también su pertinencia yeficacia, comparada con la de los tratamientos alternativosdisponibles y el uso eficiente de los recursos destinados ala salud de la población.3. Que esta es, precisamente, la política que, enmateria de prescripción de medicamentos de alto costorecomienda desde el año 2016 la Organización Mundial de la<br/>Salud, en el documento “El acceso y uso racional de losmedicamentos y otras tecnologías sanitarias estratégicas y dealto costo”, aprobado en la 55° del Consejo Directivo y 68.a<br/>Sesión del Comité Regional de la OMS para las Américas.<br/>Allí se establece que el aseguramiento a las personas ya la comunidad del “acceso a medicamentos seguros,asequibles, eficaces y de calidad a fin de evitardificultades económicas, el empobrecimiento o la exposición agastos catastróficos, especialmente en el caso de los gruposen condiciones de vulnerabilidad”, debe realizarse mediante“la adopción por los países de una lista explícita demedicamentos y otras tecnologías sanitarias que se base enlos criterios establecidos por la OMS para la adopción delistas de medicamentos esenciales, que aborde las prioridadesfundamentales y que se evalúe, revise o amplíeprogresivamente cuando corresponda y mediante criterios deeficacia, seguridad y costo-efectividad puede promover laeficiencia y la equidad”.4. Que, en consecuencia, a juicio de estos disidentes,no estamos ante una negativa de cobertura que puedacalificarse de ilegal o arbitraria, por ser abusiva,caprichosa o carente de fundamento, requisito fundamentalpara otorgar la protección que establece el art. 19, N.° 20,de la Constitución Política de la República.<br/>Regístrese y devuélvase.<br/>Redacción a cargo del Ministro señor Matus.<br/>Rol N° 236.703-2023.-<br/>Pronunciado por la Tercera Sala de esta Corte Supremaintegrada por los Ministros (a) Sr. Sergio Muñoz G., Sra.Ángela Vivanco M., Sr. Jean Pierre Matus A., el Ministro<br/>Suplente Sr. Juan Manuel Muñoz P., y la Abogada Integrante<br/>Sra. Carolina Coppo D. Santiago, 13 de noviembre de 2023.<br/>",
+  "texto_sentencia_preview": "<br/>Santiago, trece de noviembre de dos mil veintitrés.<br/>Vistos:<br/>Se confirma la sentencia apelada de fecha dos de octubrede dos mil veintitrés.<br/>Acordada con el voto en contra del ministro señor Matusy del ministro (S) señor Muñoz Pardo, quienes estuvieron porrevocar la sentencia apelada, rechazar el recurso deprotección, teniendo presente:1. Que la administración del medicamento ETEPLIRSEN(Exondys 51), no se encuentra entre las prescripciones que el<br/>Fondo Nacional de Salud establece como parte de aquellostratamientos incorporados a las Garantías Explícitas en<br/>Salud, ni ha sido autorizada en alguno de los programasextraordinarios de cobertura para medicamentos de alto costo,como los establecidos en la Ley N.° 20.850, que Crea un<br/>Sistema de Protección Financiera para Diagnósticos y<br/>Tratamientos de Alto Costo y en la Cobertura Adicional de<br/>Enfermedades Catastróficas.2. Que el hecho de que, en ciertos casos, no exist",
+  "tipo_archivo_s": "application/pdf",
+  "texto_sentencia_anon": "\nSantiago, trece de noviembre de dos mil veintitrés.\nVistos:\nSe confirma la sentencia apelada de fecha dos de octubrede dos mil veintitrés.\nAcordada con el voto en contra del ministro señor Matusy del ministro (S) señor Muñoz Pardo, quienes estuvieron porrevocar  la  sentencia  apelada,  rechazar  el  recurso  deprotección, teniendo presente:1.  Que  la  administración  del  medicamento  ETEPLIRSEN(Exondys 51), no se encuentra entre las prescripciones que el\nFondo  Nacional  de  Salud  establece  como  parte  de  aquellostratamientos  incorporados  a  las  Garantías  Explícitas  en\nSalud,  ni  ha  sido  autorizada  en  alguno  de  los  programasextraordinarios de cobertura para medicamentos de alto costo,como  los  establecidos  en  la  Ley  N.°  20.850,  que  Crea  un\nSistema  de  Protección  Financiera  para  Diagnósticos  y\nTratamientos de Alto Costo y en la Cobertura Adicional de\nEnfermedades Catastróficas.2. Que el hecho de que, en ciertos casos, no exista ladisponibilidad de ciertos medicamentos de alto costo para unpaciente determinado, no importa la obligación estatal o delos servicios de salud de proveerlos, si ello no ha sidoaprobado  por  las  instituciones  de  salud  de  la  República,después de un análisis científico riguroso que considere nosolo sus efectos individuales, sino también su pertinencia yeficacia, comparada con la de los tratamientos alternativosdisponibles y el uso eficiente de los recursos destinados ala salud de la población.3.  Que  esta  es,  precisamente,  la  política  que,  enmateria  de  prescripción  de  medicamentos  de  alto  costorecomienda desde el año 2016 la Organización Mundial de la\nSalud,  en  el  documento  “El  acceso  y  uso  racional  de  losmedicamentos y otras tecnologías sanitarias estratégicas y dealto costo”, aprobado en la 55° del Consejo Directivo y 68.a\nSesión del Comité Regional de la OMS para las Américas.\nAllí se establece que el aseguramiento a las personas ya  la  comunidad  del  “acceso  a  medicamentos  seguros,asequibles,  eficaces  y  de  calidad  a  fin  de  evitardificultades económicas, el empobrecimiento o la exposición agastos catastróficos, especialmente en el caso de los gruposen condiciones de vulnerabilidad”, debe realizarse mediante“la  adopción  por  los  países  de  una  lista  explícita  demedicamentos y otras tecnologías sanitarias que se base enlos criterios establecidos por la OMS para la adopción delistas de medicamentos esenciales, que aborde las prioridadesfundamentales  y  que  se  evalúe,  revise  o  amplíeprogresivamente cuando corresponda y mediante criterios deeficacia,  seguridad  y  costo-efectividad  puede  promover  laeficiencia y la equidad”.4. Que, en consecuencia, a juicio de estos disidentes,no  estamos  ante  una  negativa  de  cobertura  que  puedacalificarse  de  ilegal  o  arbitraria,  por  ser  abusiva,caprichosa  o  carente  de  fundamento,  requisito  fundamentalpara otorgar la protección que establece el art. 19, N.° 20,de la Constitución Política de la República.\nRegístrese y devuélvase. \nRedacción a cargo del Ministro señor Matus.\nRol N° 236.703-2023.-\nPronunciado  por  la  Tercera  Sala  de  esta  Corte  Supremaintegrada por los Ministros (a) Sr. Sergio Muñoz G., Sra.Ángela  Vivanco  M.,  Sr.  Jean  Pierre  Matus  A.,  el  Ministro\nSuplente Sr. Juan Manuel Muñoz P., y la Abogada Integrante\nSra. Carolina Coppo D. Santiago, 13 de noviembre de 2023.\n",
+  "texto_sentencia_anon_preview": "\nSantiago, trece de noviembre de dos mil veintitrés.\nVistos:\nSe confirma la sentencia apelada de fecha dos de octubrede dos mil veintitrés.\nAcordada con el voto en contra del ministro señor Matusy del ministro (S) señor Muñoz Pardo, quienes estuvieron porrevocar  la  sentencia  apelada,  rechazar  el  recurso  deprotección, teniendo presente:1.  Que  la  administración  del  medicamento  ETEPLIRSEN(Exondys 51), no se encuentra entre las prescripciones que el\nFondo  Nacional  de  Salud  establece  como  parte  de  aquellostratamientos  incorporados  a  las  Garantías  Explícitas  en\nSalud,  ni  ha  sido  autorizada  en  alguno  de  los  programasextraordinarios de cobertura para medicamentos de alto costo,como  los  establecidos  en  la  Ley  N.°  20.850,  que  Crea  un\nSistema  de  Protección  Financiera  para  Diagnósticos  y\nTratamientos de Alto Costo y en la Cobertura Adicional de\nEnfermedades Catastróficas.2. Que el hecho de que, en ciertos casos, no exist",
+  "sent__tipo_archivo_anon_s": "application/pdf",
+  "tematica_ss": [
+    "Medicamentos de alto costo"
+  ],
+  "enfermedad_ss": [
+    "Distrofia muscular de Duchenne"
+  ],
+  "medicamento_ss": [
+    "Eteplirsen / Exondys 51"
+  ],
+  "_version_": 1836117419545854000,
+  "url_acceso_sentencia": "https://juris.pjud.cl/busqueda/pagina_detalle_sentencia/?k=bm15UmVFeU0wN1B1VXcvYytTK2JkUT09",
+  "url_corta_acceso_sentencia": "https://juris.pjud.cl/busqueda/u?digw2",
+  "TEXTO_ETIQUETADO_t": null,
+  "cita_bibliografica": "ANONIMIZADO: 13-11-2023 ((CIVIL) APELACIÓN PROTECCIÓN), Rol N° 236703-2023. En Compendio de Salud de Corte Suprema (https://juris.pjud.cl/busqueda/u?digw2). Fecha de consulta: 27-06-2025",
+  "id_obj_sentencia_guardada": ""
+}

@@ -13,7 +13,6 @@
     "@langchain/community": "^0.3.45",
     "@langchain/core": "^0.3.57",
     "@langchain/openai": "^0.5.11",
-    "@langchain/pinecone": "^0.2.0",
     "@nestjs/common": "^11.0.10",
     "axios": "^1.7.9",
     "cheerio": "^1.0.0",
@@ -21,6 +20,8 @@
     "he": "^1.2.0",
     "mongodb": "^6.16.0",
     "node-cron": "^3.0.3",
+    "p-limit": "^6.2.0",
+    "redis": "^4.7.1",
     "string-similarity": "^4.0.4",
     "xml2js": "^0.6.2"
   }
