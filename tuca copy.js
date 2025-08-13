@@ -41,15 +41,15 @@ const config = {
   }
 };
 
-// OPTIMIZACIÓN ULTRA AGRESIVA PARA RTX 3060 12GB VRAM + 32GB RAM
+// CONFIGURACIÓN OPTIMIZADA BASADA EN TESTS REALES RTX 3060
 const PARALLELIZATION_CONFIG = {
-  MAX_CONCURRENT_DOCS: 50,        // Aumentado agresivamente para 32GB RAM
-  MAX_CONCURRENT_EMBEDDINGS: 100, // Aumentado para aprovechar 12GB VRAM
-  EMBEDDING_BATCH_SIZE: 128,      // Batch mucho más grande para GPU
+  MAX_CONCURRENT_DOCS: 40,        // Optimizado para evitar saturación
+  MAX_CONCURRENT_EMBEDDINGS: 25,  // Basado en test de concurrencia (143 req/sec)
+  EMBEDDING_BATCH_SIZE: 128,      // ÓPTIMO: 591.9 texts/sec confirmado
   EMBEDDING_API_URL: process.env.EMBEDDING_API_URL || 'http://localhost:11441/embed',
   TARGET_DIMENSION: 1024,
-  QDRANT_BATCH_SIZE: 500,         // Batches más grandes para Qdrant
-  MAX_CONCURRENT_QDRANT_UPSERTS: 20 // Más upserts paralelos
+  QDRANT_BATCH_SIZE: 200,         // Reducido para evitar errores 400
+  MAX_CONCURRENT_QDRANT_UPSERTS: 10 // Reducido para estabilidad
 };
 
 /**
@@ -196,37 +196,37 @@ function createMetadataByType(jsonData, tipoBase) {
   }
 }
 
-// OPTIMIZACIÓN ULTRA AGRESIVA PARA HARDWARE POTENTE
+// CONFIGURACIÓN OPTIMIZADA BASADA EN TESTS RTX 3060
 const OPTIMIZATION_CONFIGS = {
   HEAVY_LOAD: {
-    BATCH_SIZE: 500,  // Aumentado agresivamente para 32GB RAM
-    BATCH_PAUSE_MS: 10,     // Pausa mínima
-    SOCKET_TIMEOUT: 120000, // Timeout más largo para batches grandes
+    BATCH_SIZE: 100,        // Optimizado para evitar saturación
+    BATCH_PAUSE_MS: 50,     // Pausa para estabilidad
+    SOCKET_TIMEOUT: 60000,  // Timeout conservador
     MAX_RETRIES: 3
   },
   MEDIUM_LOAD: {
-    BATCH_SIZE: 300,
-    BATCH_PAUSE_MS: 25,
-    SOCKET_TIMEOUT: 90000,
+    BATCH_SIZE: 75,
+    BATCH_PAUSE_MS: 75,
+    SOCKET_TIMEOUT: 45000,
     MAX_RETRIES: 3
   },
   LIGHT_LOAD: {
-    BATCH_SIZE: 200,
-    BATCH_PAUSE_MS: 50,
-    SOCKET_TIMEOUT: 60000,
+    BATCH_SIZE: 50,
+    BATCH_PAUSE_MS: 100,
+    SOCKET_TIMEOUT: 30000,
     MAX_RETRIES: 2
   }
 };
 
 function getOptimalConfig(totalFiles) {
-  if (totalFiles > 10000) {
-    console.log('🔥 Configuración HEAVY_LOAD detectada (>10k archivos) - RTX 3060 Mode');
+  if (totalFiles > 5000) {
+    console.log('🔥 Configuración HEAVY_LOAD detectada (>5k archivos) - RTX 3060 Optimized');
     return OPTIMIZATION_CONFIGS.HEAVY_LOAD;
-  } else if (totalFiles > 1000) {
-    console.log('⚡ Configuración MEDIUM_LOAD detectada (1k-10k archivos) - RTX 3060 Mode');
+  } else if (totalFiles > 500) {
+    console.log('⚡ Configuración MEDIUM_LOAD detectada (500-5k archivos) - RTX 3060 Optimized');
     return OPTIMIZATION_CONFIGS.MEDIUM_LOAD;
   } else {
-    console.log('💡 Configuración LIGHT_LOAD detectada (<1k archivos) - RTX 3060 Mode');
+    console.log('💡 Configuración LIGHT_LOAD detectada (<500 archivos) - RTX 3060 Optimized');
     return OPTIMIZATION_CONFIGS.LIGHT_LOAD;
   }
 }
