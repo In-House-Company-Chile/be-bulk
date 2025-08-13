@@ -20,7 +20,7 @@ class IdGenerator {
  * Clase ULTRA-OPTIMIZADA para indexar documentos en Qdrant
  * Configurada para 30+ docs/seg en RTX 3060 con 12GB VRAM
  */
-class IndexarQdrant {
+class IndexarQdrantUltra {
   constructor(doc, collectionName, metadata = {}) {
     this.doc = doc;
     this.collectionName = collectionName;
@@ -450,4 +450,4 @@ class IndexarQdrant {
   }
 }
 
-module.exports = IndexarQdrant;
+module.exports = IndexarQdrantUltra;
