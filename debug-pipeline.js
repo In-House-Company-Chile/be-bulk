@@ -123,7 +123,7 @@ async function debugPipeline() {
       
       const embeddings = Array.isArray(allResponse.data[0]) ? allResponse.data : [allResponse.data];
       const points = chunks.map((chunk, idx) => ({
-        id: `debug_${Date.now()}_${i}_${idx}`,
+        id: require('uuid').v4(), // UUID válido
         vector: embeddings[idx] || embeddings[0],
         payload: {
           ...metadata,
