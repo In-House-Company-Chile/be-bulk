@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { v4: uuidv4 } = require('uuid');
 
 const QDRANT_URL = 'http://localhost:6333';
 const COLLECTION_NAME = 'test_jurisprudencia_3';
@@ -34,7 +35,7 @@ async function quickFix() {
     // 2. Test simple de upsert
     console.log('\n🧪 Test de upsert simple...');
     const testPoint = {
-      id: `test_${Date.now()}`,
+      id: uuidv4(),
       vector: Array(1024).fill(0.1),
       payload: {
         text: "Test",
