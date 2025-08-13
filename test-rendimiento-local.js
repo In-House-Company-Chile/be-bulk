@@ -8,9 +8,9 @@ const { indexarDocumentosExternos } = require('./puca copy.js');
 const fs = require('fs');
 
 // Configuración para tu setup local
-const CARPETA_DOCUMENTOS = 'C:/Users/kathe/Desktop/Leo/sentencias/test';
-const COLECCION_QDRANT = 'test_jurisprudencia';
-const TIPO_BASE = 'corte_de_apelaciones';
+const CARPETA_DOCUMENTOS = process.env.FOLDER;
+const COLECCION_QDRANT = process.env.QDRANT_COLLECTION;
+const TIPO_BASE = process.env.BASE_NAME;
 
 async function testRendimientoLocal() {
   try {
