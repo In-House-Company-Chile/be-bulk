@@ -52,7 +52,7 @@ const LOCAL = {
 // Para servicios locales con GPU potente (RTX 3060+)
 const ULTRA_RAPIDA = {
   batchSize: 40,           // Lotes muy grandes
-  maxConcurrency: 15,      // Máxima paralelización posible
+  maxConcurrency: 20,      // Máxima paralelización posible
   delayBetweenBatches: 0,  // SIN pausas entre lotes
   delayBetweenItems: 0     // SIN pausas entre items
 };

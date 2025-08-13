@@ -28,9 +28,9 @@ class IndexarQdrant {
     this.embeddingUrl = process.env.EMBEDDING_URL || 'http://ms-vector.governare.ai/embed';
     
     // Configuración de embeddings paralelos y lotes
-    this.embeddingConcurrency = 8; // Requests simultáneos para embeddings
-    this.batchSize = 15; // Chunks por lote - ajustable dinámicamente según tamaño del documento
-    this.batchDelay = 300; // Pausa entre lotes en ms (reducida)
+    this.embeddingConcurrency = 32; // Requests simultáneos para embeddings
+    this.batchSize = 100; // Chunks por lote - ajustable dinámicamente según tamaño del documento
+    this.batchDelay = 0; // Pausa entre lotes en ms (reducida)
   }
 
   /**
