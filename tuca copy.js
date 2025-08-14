@@ -457,12 +457,9 @@ async function indexarQdrant(sentenciasDir, vectorizedDir) {
     console.log(`📍 URL Qdrant: ${qdrantUrl}`);
     console.log(`📦 Colección: ${QDRANT_COLLECTION}`);
 
-    // Inicializar sistema de caché
+    // Inicializar sistema de caché (sin Redis)
     const cacheManager = new CacheManager({
-      useRedis: true, // Cambiar a false para usar solo archivo
-      redisHost: 'localhost',
-      redisPort: 6379,
-      // redisPassword: 'tu_password_si_tienes', // Opcional
+      useRedis: false, // Usar solo archivo, sin verificación de Redis
       cacheFile: 'cache/existing_ids.json.gz',
     });
 
