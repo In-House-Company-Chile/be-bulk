@@ -264,12 +264,12 @@ function createPerformanceMonitor() {
       console.log(`   🔢 Chunks promedio por doc: ${avgChunksPerDoc.toFixed(1)}`);
       console.log(`   ⏱️ Tiempo estimado restante: ${Math.round(estimatedTimeRemaining)}s`);
       console.log(`   💾 Total procesado: ${totalProcessed} documentos (${totalChunks} chunks)`);
-
+      
       if (totalEmbeddingTime > 0) {
         const avgEmbeddingTime = totalEmbeddingTime / totalProcessed;
         console.log(`   🧠 Tiempo promedio embeddings: ${avgEmbeddingTime.toFixed(0)}ms/doc`);
       }
-
+      
       if (totalPineconeTime > 0) {
         const avgPineconeTime = totalPineconeTime / totalProcessed;
         console.log(`   📦 Tiempo promedio Pinecone: ${avgPineconeTime.toFixed(0)}ms/doc`);
@@ -308,13 +308,13 @@ async function warmupEmbeddingService() {
       'Este es un texto de prueba para calentar el servicio',
       'Segundo texto de prueba para verificar batch processing'
     ];
-
+    
     const response = await axios.post(
       PARALLELIZATION_CONFIG.EMBEDDING_API_URL,
       { inputs: testTexts },
       { timeout: 30000 }
     );
-
+    
     console.log('✅ Servicio de embeddings listo');
     return true;
   } catch (error) {
@@ -338,13 +338,13 @@ async function processDocumentQueue(queue, cacheManager, vectorizedDir, BASE_NAM
   // Procesar en paralelo máximo
   const workers = [];
   const maxWorkers = PARALLELIZATION_CONFIG.MAX_CONCURRENT_DOCS;
-
+  
   for (let i = 0; i < maxWorkers; i++) {
     workers.push(processWorker(queue, cacheManager, results, BASE_NAME));
   }
 
   await Promise.all(workers);
-
+  
   return results;
 }
 
@@ -368,21 +368,21 @@ async function processWorker(queue, cacheManager, results, BASE_NAME) {
       }
 
       // Verificar duplicados usando caché
-      /* const isDuplicate = await cacheManager.exists(jsonData.id);
+      const isDuplicate = await cacheManager.exists(jsonData.id);
       if (isDuplicate) {
         results.duplicates.push({ archivo, rutaOrigen });
         continue;
-      } */
+      }
 
       // Crear metadata
       const metadata = createMetadataByType(jsonData, BASE_NAME);
 
       // Vectorizar
       const embeddingStartTime = Date.now();
-
+      
       const indexResult = await IndexarQdrant.create(
-        jsonData.texto_sentencia,
-        QDRANT_COLLECTION,
+        jsonData.texto_sentencia, 
+        QDRANT_COLLECTION, 
         metadata,
         {
           embeddingBatchSize: PARALLELIZATION_CONFIG.EMBEDDING_BATCH_SIZE,
@@ -398,7 +398,7 @@ async function processWorker(queue, cacheManager, results, BASE_NAME) {
       const embeddingTime = docEndTime - embeddingStartTime;
 
       // Agregar ID al caché
-      // await cacheManager.add(jsonData.id);
+      await cacheManager.add(jsonData.id);
 
       results.success.push({ archivo, rutaOrigen });
       results.totalChunks += (indexResult?.chunks || 0);
@@ -450,7 +450,7 @@ async function indexarQdrant(sentenciasDir, vectorizedDir) {
     // Configurar lotes
     const optimalConfig = getOptimalConfig(archivos.length);
     const BATCH_SIZE = optimalConfig.BATCH_SIZE;
-
+    
     // Configurar Qdrant
     console.log('🔍 Configurando Qdrant...');
     const qdrantUrl = config.QDRANT.URL;
@@ -458,13 +458,13 @@ async function indexarQdrant(sentenciasDir, vectorizedDir) {
     console.log(`📦 Colección: ${QDRANT_COLLECTION}`);
 
     // Inicializar sistema de caché (sin Redis)
-    /*     const cacheManager = new CacheManager({
-          useRedis: false, // Usar solo archivo, sin verificación de Redis
-          cacheFile: 'cache/existing_ids.json.gz',
-        }); */
-    // Inicializar sistema de caché
+/*     const cacheManager = new CacheManager({
+      useRedis: false, // Usar solo archivo, sin verificación de Redis
+      cacheFile: 'cache/existing_ids.json.gz',
+    }); */
+        // Inicializar sistema de caché
     const cacheManager = new CacheManager({
-      useRedis: false, // Cambiar a false para usar solo archivo
+      useRedis: true, // Cambiar a false para usar solo archivo
       redisHost: 'localhost',
       redisPort: 6379,
       // redisPassword: 'tu_password_si_tienes', // Opcional
@@ -472,10 +472,10 @@ async function indexarQdrant(sentenciasDir, vectorizedDir) {
     });
 
     // Sincronizar caché con Qdrant
-    // await cacheManager.syncWithQdrant(qdrantUrl, QDRANT_COLLECTION);
-
-    // const totalCachedIds = await cacheManager.size();
-    // console.log(`✅ ${totalCachedIds} IDs disponibles en caché`);
+    await cacheManager.syncWithQdrant(qdrantUrl, QDRANT_COLLECTION);
+    
+    const totalCachedIds = await cacheManager.size();
+    console.log(`✅ ${totalCachedIds} IDs disponibles en caché`);
 
 
 
@@ -513,9 +513,9 @@ async function indexarQdrant(sentenciasDir, vectorizedDir) {
 
       // Procesar cola
       const results = await processDocumentQueue(
-        queue,
-        cacheManager,
-        vectorizedDir,
+        queue, 
+        cacheManager, 
+        vectorizedDir, 
         BASE_NAME,
         performanceMonitor
       );
@@ -544,11 +544,11 @@ async function indexarQdrant(sentenciasDir, vectorizedDir) {
     // Mover archivos procesados
     console.log(`\n📁 Moviendo archivos procesados...`);
     let movedCount = 0;
-
+    
     for (const archivo of archivos) {
       const rutaOrigen = path.join(sentenciasDir, archivo);
       const rutaDestino = path.join(vectorizedDir, archivo);
-
+      
       try {
         if (fs.existsSync(rutaOrigen)) {
           fs.renameSync(rutaOrigen, rutaDestino);
@@ -574,7 +574,7 @@ async function indexarQdrant(sentenciasDir, vectorizedDir) {
     console.log(`   💾 Throughput: ${(processedCount / finalStats.totalTime * 60).toFixed(0)} docs/min`);
 
     // Cerrar caché
-    // await cacheManager.close();
+    await cacheManager.close();
 
   } catch (error) {
     console.error('\n🛑 ERROR CRÍTICO EN QDRANT:', error);
