@@ -368,11 +368,11 @@ async function processWorker(queue, cacheManager, results, BASE_NAME) {
       }
 
       // Verificar duplicados usando caché
-      const isDuplicate = await cacheManager.exists(jsonData.id);
+      /* const isDuplicate = await cacheManager.exists(jsonData.id);
       if (isDuplicate) {
         results.duplicates.push({ archivo, rutaOrigen });
         continue;
-      }
+      } */
 
       // Crear metadata
       const metadata = createMetadataByType(jsonData, BASE_NAME);
@@ -398,7 +398,7 @@ async function processWorker(queue, cacheManager, results, BASE_NAME) {
       const embeddingTime = docEndTime - embeddingStartTime;
 
       // Agregar ID al caché
-      await cacheManager.add(jsonData.id);
+      // await cacheManager.add(jsonData.id);
 
       results.success.push({ archivo, rutaOrigen });
       results.totalChunks += (indexResult?.chunks || 0);
@@ -464,7 +464,7 @@ async function indexarQdrant(sentenciasDir, vectorizedDir) {
         }); */
     // Inicializar sistema de caché
     const cacheManager = new CacheManager({
-      useRedis: true, // Cambiar a false para usar solo archivo
+      useRedis: false, // Cambiar a false para usar solo archivo
       redisHost: 'localhost',
       redisPort: 6379,
       // redisPassword: 'tu_password_si_tienes', // Opcional
@@ -472,10 +472,10 @@ async function indexarQdrant(sentenciasDir, vectorizedDir) {
     });
 
     // Sincronizar caché con Qdrant
-    await cacheManager.syncWithQdrant(qdrantUrl, QDRANT_COLLECTION);
+    // await cacheManager.syncWithQdrant(qdrantUrl, QDRANT_COLLECTION);
 
-    const totalCachedIds = await cacheManager.size();
-    console.log(`✅ ${totalCachedIds} IDs disponibles en caché`);
+    // const totalCachedIds = await cacheManager.size();
+    // console.log(`✅ ${totalCachedIds} IDs disponibles en caché`);
 
 
 
@@ -574,7 +574,7 @@ async function indexarQdrant(sentenciasDir, vectorizedDir) {
     console.log(`   💾 Throughput: ${(processedCount / finalStats.totalTime * 60).toFixed(0)} docs/min`);
 
     // Cerrar caché
-    await cacheManager.close();
+    // await cacheManager.close();
 
   } catch (error) {
     console.error('\n🛑 ERROR CRÍTICO EN QDRANT:', error);
