@@ -17,119 +17,62 @@ class IdGenerator {
 }
 
 /**
- * Clase ULTRA-OPTIMIZADA para indexar documentos en Qdrant
- * Configurada para 30+ docs/seg en RTX 3060 con 12GB VRAM
+ * Clase para indexar documentos en Qdrant usando un servicio de embeddings externo
  */
 class IndexarQdrant {
   constructor(doc, collectionName, metadata = {}) {
     this.doc = doc;
     this.collectionName = collectionName;
     this.metadata = metadata;
-    this.qdrantUrl = process.env.QDRANT_URL || 'http://localhost:6333';
-    this.embeddingUrl = process.env.EMBEDDING_URL || 'http://localhost:11441/embed';
-    
-    // CONFIGURACIÓN ULTRA - Para RTX 3060 12GB + 30GB RAM
-    this.embeddingConcurrency = 64; // Máximo paralelismo (8x más)
-    this.batchSize = 150; // Lotes masivos (10x más)
-    this.batchDelay = 0; // SIN pausas
-    this.requestTimeout = 45000; // Timeout más largo para lotes grandes
-    
-    // Pool de conexiones para embeddings (reutilizar conexiones)
-    this.axiosInstance = axios.create({
-      timeout: this.requestTimeout,
-      maxRedirects: 0,
-      headers: {
-        'Content-Type': 'application/json',
-        'Connection': 'keep-alive'
-      }
-    });
+    this.qdrantUrl = process.env.QDRANT_URL || 'http://ms-qdrant-8f82e7cd-8cc2.governare.ai';
+    this.embeddingUrl = process.env.EMBEDDING_URL || 'http://ms-vector.governare.ai/embed';
   }
 
   /**
-   * Método estático para crear y ejecutar la indexación ULTRA
+   * Método estático para crear y ejecutar la indexación
+   * @param {string} doc - Texto del documento a indexar
+   * @param {string} collectionName - Nombre de la colección en Qdrant
+   * @param {Object} metadata - Metadatos del documento
    */
   static async create(doc, collectionName, metadata = {}, sourceFilePath = null) {
-    const indexer = new IndexarQdrantUltra(doc, collectionName, metadata);
+    const indexer = new IndexarQdrant(doc, collectionName, metadata);
     return await indexer.indexar(sourceFilePath);
   }
 
   /**
-   * Genera embeddings con paralelismo MASIVO (64 simultáneos)
-   * Optimizado para RTX 3060 12GB
+   * Genera embeddings usando el servicio externo
+   * @param {string} text - Texto para generar embedding
+   * @returns {Array} Vector embedding
    */
-  async generateEmbeddingsUltraParallel(texts) {
-    const embeddings = [];
-    const errors = [];
-    
-    console.log(`⚡ Generando ${texts.length} embeddings - MODO ULTRA (concurrencia: ${this.embeddingConcurrency})`);
-    
-    // Dividir en súper-lotes para evitar saturar completamente
-    const superBatchSize = Math.min(this.embeddingConcurrency * 4, 256); // Máximo 256 por súper-lote
-    
-    for (let i = 0; i < texts.length; i += superBatchSize) {
-      const superBatch = texts.slice(i, i + superBatchSize);
-      const superBatchNum = Math.floor(i / superBatchSize) + 1;
-      const totalSuperBatches = Math.ceil(texts.length / superBatchSize);
-      
-      console.log(`🔥 Súper-lote ${superBatchNum}/${totalSuperBatches} (${superBatch.length} embeddings)...`);
-      
-      // Procesar súper-lote en paralelo extremo
-      const batchPromises = [];
-      
-      for (let j = 0; j < superBatch.length; j += this.embeddingConcurrency) {
-        const batch = superBatch.slice(j, j + this.embeddingConcurrency);
-        
-        const batchPromise = Promise.all(
-          batch.map(async (text, batchIndex) => {
-            const globalIndex = i + j + batchIndex;
-            try {
-              const response = await this.axiosInstance.post(this.embeddingUrl, {
-                inputs: text
-              });
-
-              if (Array.isArray(response.data) && response.data.length === 1 && Array.isArray(response.data[0])) {
-                const embedding = response.data[0];
-                if (embedding.length === 1024) {
-                  return { index: globalIndex, embedding, success: true };
-                } else {
-                  throw new Error(`Embedding dimensión incorrecta: ${embedding.length}`);
-                }
-              } else {
-                throw new Error('Formato de respuesta inesperado');
-              }
-            } catch (error) {
-              return { index: globalIndex, error: error.message, success: false };
-            }
-          })
-        );
-        
-        batchPromises.push(batchPromise);
-      }
-      
-      // Esperar todos los lotes del súper-lote
-      const superBatchResults = await Promise.all(batchPromises);
-      
-      // Procesar resultados
-      let superBatchSuccesses = 0;
-      let superBatchErrors = 0;
-      
-      superBatchResults.flat().forEach(result => {
-        if (result.success) {
-          embeddings[result.index] = result.embedding;
-          superBatchSuccesses++;
-        } else {
-          errors.push({ index: result.index, error: result.error });
-          superBatchErrors++;
-        }
+  async generateEmbedding(text) {
+    try {
+      const response = await axios.post(this.embeddingUrl, {
+        inputs: [text]
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
       });
-      
-      console.log(`✅ Súper-lote ${superBatchNum}: ${superBatchSuccesses} éxitos, ${superBatchErrors} errores`);
+
+      // El servicio devuelve formato: [[embedding_vector_1024_dims]]
+      // Extraer el vector real del formato anidado
+      if (Array.isArray(response.data) && response.data.length === 1 && Array.isArray(response.data[0])) {
+        const embedding = response.data[0];
+        if (embedding.length === 1024) {
+          console.log(`✅ Embedding generado correctamente: ${embedding.length} dimensiones`);
+          return embedding;
+        } else {
+          throw new Error(`Embedding tiene dimensión incorrecta: ${embedding.length}, se esperaba 1024`);
+        }
+      } else {
+        throw new Error('Formato de respuesta inesperado del servicio de embeddings');
+      }
+
+    } catch (error) {
+      console.error('❌ Error generando embedding:', error.message);
+      throw error;
     }
-    
-    const successCount = embeddings.filter(e => e).length;
-    console.log(`⚡ ULTRA completado: ${successCount}/${texts.length} embeddings (${((successCount/texts.length)*100).toFixed(1)}% éxito)`);
-    
-    return { embeddings, errors };
   }
 
   /**
@@ -137,291 +80,218 @@ class IndexarQdrant {
    */
   async ensureCollection() {
     try {
+      // Verificar si la colección existe
       const checkResponse = await axios.get(`${this.qdrantUrl}/collections/${this.collectionName}`);
-      console.log(`✅ Colección '${this.collectionName}' existente`);
+      console.log(`✅ Colección '${this.collectionName}' ya existe`);
     } catch (error) {
       if (error.response && error.response.status === 404) {
+        // La colección no existe, crearla
         console.log(`📝 Creando colección '${this.collectionName}'...`);
-        await axios.put(`${this.qdrantUrl}/collections/${this.collectionName}`, {
-          vectors: {
-            size: 1024,
-            distance: "Cosine"
-          }
-        }, {
-          headers: { 'Content-Type': 'application/json' }
-        });
-        console.log(`✅ Colección '${this.collectionName}' creada`);
+        try {
+          await axios.put(`${this.qdrantUrl}/collections/${this.collectionName}`, {
+            vectors: {
+              size: 1024,
+              distance: "Cosine"
+            }
+          }, {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          console.log(`✅ Colección '${this.collectionName}' creada exitosamente`);
+        } catch (createError) {
+          console.error('❌ Error creando colección:', createError.message);
+          throw createError;
+        }
       } else {
+        console.error('❌ Error verificando colección:', error.message);
         throw error;
       }
     }
   }
 
   /**
-   * Inserta chunks en MEGA-LOTES (150+ chunks por lote)
-   */
-  async insertPointsUltraBatches(points) {
-    if (points.length === 0) {
-      throw new Error('No hay puntos para insertar');
-    }
-
-    const totalBatches = Math.ceil(points.length / this.batchSize);
-    let insertedCount = 0;
-    let failedCount = 0;
-
-    console.log(`📤 Inserción ULTRA: ${points.length} puntos en ${totalBatches} mega-lotes de ${this.batchSize}`);
-
-    // Procesar todos los lotes EN PARALELO (sin pausas)
-    const batchPromises = [];
-    
-    for (let i = 0; i < points.length; i += this.batchSize) {
-      const batchNumber = Math.floor(i / this.batchSize) + 1;
-      const batch = points.slice(i, i + this.batchSize);
-      
-      const batchPromise = this.insertSingleBatch(batch, batchNumber, totalBatches);
-      batchPromises.push(batchPromise);
-    }
-    
-    console.log(`🚀 Ejecutando ${totalBatches} lotes EN PARALELO...`);
-    const batchResults = await Promise.allSettled(batchPromises);
-    
-    // Procesar resultados
-    batchResults.forEach((result, index) => {
-      if (result.status === 'fulfilled' && result.value.success) {
-        insertedCount += result.value.inserted;
-      } else {
-        const batchSize = Math.min(this.batchSize, points.length - (index * this.batchSize));
-        failedCount += batchSize;
-        console.error(`❌ Lote ${index + 1} falló:`, result.reason?.message || 'Unknown error');
-      }
-    });
-
-    console.log(`📤 Inserción ULTRA completada: ${insertedCount}/${points.length} insertados`);
-
-    return {
-      success: insertedCount > 0,
-      inserted: insertedCount,
-      failed: failedCount,
-      total: points.length
-    };
-  }
-
-  /**
-   * Inserta un lote individual
-   */
-  async insertSingleBatch(batch, batchNumber, totalBatches) {
-    try {
-      console.log(`🔄 Lote ${batchNumber}/${totalBatches} (${batch.length} chunks) - PARALELO`);
-      
-      const insertResponse = await axios.put(
-        `${this.qdrantUrl}/collections/${this.collectionName}/points`, 
-        { points: batch }, 
-        {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: this.requestTimeout
-        }
-      );
-
-      if (insertResponse.data && insertResponse.data.status === 'ok') {
-        console.log(`✅ Lote ${batchNumber}/${totalBatches} - OK`);
-        return { success: true, inserted: batch.length };
-      } else {
-        throw new Error('Respuesta inesperada de Qdrant');
-      }
-
-    } catch (insertError) {
-      console.error(`❌ Lote ${batchNumber}/${totalBatches} falló:`, insertError.message);
-      return { success: false, inserted: 0 };
-    }
-  }
-
-  /**
-   * Configuración dinámica ULTRA basada en tamaño del documento
-   */
-  getUltraBatchingConfig(docText) {
-    const docLength = docText.length;
-    
-    if (docLength > 500000) {
-      // Documentos masivos (>500K chars) - lotes medianos pero más chunks
-      return { batchSize: 80 };
-    } else if (docLength > 200000) {
-      // Documentos largos (200K-500K chars) - lotes grandes
-      return { batchSize: 120 };
-    } else if (docLength > 100000) {
-      // Documentos medianos (100K-200K chars) - lotes muy grandes
-      return { batchSize: 150 };
-    } else {
-      // Documentos pequeños (<100K chars) - lotes masivos
-      return { batchSize: 200 };
-    }
-  }
-
-  /**
-   * Indexa el documento con configuración ULTRA
+   * Indexa el documento en Qdrant
+   * @param {string} sourceFilePath - Ruta del archivo original (opcional, para mover en caso de error)
    */
   async indexar(sourceFilePath = null) {
     try {
-      console.log(`🚀 INDEXACIÓN ULTRA iniciada: ${this.metadata.idSentence || 'ID desconocido'}`);
+      console.log(`🔄 Iniciando indexación en Qdrant para documento: ${this.metadata.idSentence || 'ID desconocido'}`);
 
       // Asegurar que la colección existe
       await this.ensureCollection();
 
-      // Configuración ULTRA dinámica
-      const config = this.getUltraBatchingConfig(this.doc);
-      this.batchSize = config.batchSize;
-      
-      console.log(`📄 Documento: ${this.doc.length} chars`);
-      console.log(`⚙️ Config ULTRA: chunks=800, overlap=80, lotes=${this.batchSize}, concurrencia=${this.embeddingConcurrency}`);
-
-      // Dividir texto en chunks (mantenemos 800 chars - está optimizado)
+      // Dividir el texto en chunks optimizados para documentos jurídicos
       const textSplitter = new RecursiveCharacterTextSplitter({
-        chunkSize: 800,
-        chunkOverlap: 80,
+        chunkSize: 1000,           // Aumentado para capturar más contexto jurídico
+        chunkOverlap: 100,         // 10% de overlap para mantener continuidad
         lengthFunction: (text) => text.length,
-        separators: ['\n\n', '\n', '. ', ', ', ' ', ''],
+        separators: ['\n\n', '\n', '. ', ', ', ' ', ''], // Separadores jerárquicos
       });
 
       const chunks = await textSplitter.createDocuments([this.doc]);
       const documents = await textSplitter.splitDocuments(chunks);
 
-      console.log(`📄 ${documents.length} chunks creados`);
+      console.log(`📄 Documento dividido en ${documents.length} chunks`);
 
-      // Extraer textos válidos
-      const chunkTexts = documents
-        .map(doc => doc.pageContent)
-        .filter(text => text && text.trim().length > 0);
-
-      if (chunkTexts.length === 0) {
-        throw new Error('No se encontraron chunks válidos');
-      }
-
-      // EMBEDDINGS ULTRA-PARALELOS
-      console.log(`⚡ Generando embeddings ULTRA para ${chunkTexts.length} chunks...`);
-      const startEmbedTime = Date.now();
-      const { embeddings, errors } = await this.generateEmbeddingsUltraParallel(chunkTexts);
-      const embedTime = Date.now() - startEmbedTime;
-      
-      console.log(`⚡ Embeddings ULTRA: ${(embedTime/1000).toFixed(2)}s (${(chunkTexts.length/(embedTime/1000)).toFixed(1)} chunks/seg)`);
-
-      // Crear puntos para Qdrant
+      // Procesar cada chunk
       const points = [];
-      let validChunkIndex = 0;
-      
       for (let i = 0; i < documents.length; i++) {
         const chunk = documents[i];
         const chunkText = chunk.pageContent;
 
-        if (!chunkText || chunkText.trim().length === 0) continue;
-
-        const embedding = embeddings[validChunkIndex];
-        validChunkIndex++;
-
-        if (!embedding || !Array.isArray(embedding) || embedding.length !== 1024) {
-          console.error(`❌ Embedding inválido chunk ${i + 1}`);
+        if (!chunkText || chunkText.trim().length === 0) {
+          console.log(`⚠️ Chunk ${i + 1} está vacío, saltando...`);
           continue;
         }
 
-        const uniqueId = IdGenerator.generateId();
-        const point = {
-          id: uniqueId,
-          vector: embedding,
-          payload: {
-            ...this.metadata,
-            chunk_index: i,
-            chunk_text: chunkText,
-            total_chunks: documents.length,
-            timestamp: new Date().toISOString(),
-            original_id: this.metadata.idSentence || 'unknown'
+        try {
+          // Generar embedding para este chunk
+          console.log(`🔄 Generando embedding para chunk ${i + 1}/${documents.length}...`);
+          const embedding = await this.generateEmbedding(chunkText);
+          
+          // Debug: verificar embedding
+          if (!Array.isArray(embedding) || embedding.length !== 1024) {
+            console.error(`❌ Embedding inválido:`, {
+              isArray: Array.isArray(embedding),
+              length: embedding ? embedding.length : 'undefined',
+              type: typeof embedding
+            });
+            continue;
           }
-        };
 
-        points.push(point);
+          // Crear punto para Qdrant con ID único (entero)
+          const uniqueId = IdGenerator.generateId();
+          const point = {
+            id: uniqueId,
+            vector: embedding,
+            payload: {
+              ...this.metadata,
+              chunk_index: i,
+              chunk_text: chunkText,
+              total_chunks: documents.length,
+              timestamp: new Date().toISOString(),
+              original_id: this.metadata.idSentence || 'unknown' // ID original para referencia
+            }
+          };
+
+          points.push(point);
+
+          // Pausa pequeña entre embeddings para no saturar el servicio
+          if (i < documents.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+
+        } catch (embeddingError) {
+          console.error(`❌ Error generando embedding para chunk ${i + 1}:`, embeddingError.message);
+          continue;
+        }
       }
 
       if (points.length === 0) {
-        throw new Error('No se pudieron generar embeddings válidos');
+        throw new Error('No se pudieron generar embeddings para ningún chunk');
       }
 
-      // INSERCIÓN ULTRA-PARALELA
-      console.log(`📤 Inserción ULTRA de ${points.length} puntos...`);
-      const startInsertTime = Date.now();
-      const insertResult = await this.insertPointsUltraBatches(points);
-      const insertTime = Date.now() - startInsertTime;
+      // Insertar puntos en Qdrant
+      console.log(`📤 Insertando ${points.length} puntos en Qdrant...`);
+      
+      // Debug: verificar estructura del primer punto
+      if (points.length > 0) {
+        const firstPoint = points[0];
+        console.log(`🔍 DEBUG - Estructura del primer punto:`, {
+          id: firstPoint.id,
+          idType: typeof firstPoint.id,
+          vectorLength: Array.isArray(firstPoint.vector) ? firstPoint.vector.length : 'No es array',
+          vectorType: typeof firstPoint.vector,
+          payloadKeys: Object.keys(firstPoint.payload || {}),
+          originalId: firstPoint.payload.original_id,
+          firstVectorValues: Array.isArray(firstPoint.vector) ? firstPoint.vector.slice(0, 3) : 'N/A'
+        });
+      }
+      
+      const requestData = { points: points };
+      
+      let insertResponse;
+      try {
+        insertResponse = await axios.put(`${this.qdrantUrl}/collections/${this.collectionName}/points`, requestData, {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          timeout: 60000
+        });
+      } catch (insertError) {
+        console.error('❌ Error insertando en Qdrant:', insertError.message);
+        if (insertError.response) {
+          console.error('📋 Status:', insertError.response.status);
+          console.error('📋 Response data:', JSON.stringify(insertError.response.data, null, 2));
+          console.error('📋 Request data sample:', JSON.stringify({
+            points: points.slice(0, 1) // Solo mostrar el primer punto para debug
+          }, null, 2));
+          
+          // Si es error 413 y tenemos la ruta del archivo, moverlo a carpeta de errores
+          if (insertError.response.status === 413 && sourceFilePath) {
+            await this.moveToErrorFolder(sourceFilePath);
+          }
+        }
+        throw insertError;
+      }
 
-      console.log(`📤 Inserción ULTRA: ${(insertTime/1000).toFixed(2)}s`);
-
-      if (insertResult.success) {
-        const totalTime = (embedTime + insertTime) / 1000;
-        console.log(`✅ ULTRA indexación exitosa: ${this.metadata.idSentence || 'ID desconocido'}`);
-        console.log(`📊 Stats ULTRA:`);
-        console.log(`   💾 Chunks: ${insertResult.inserted}/${insertResult.total}`);
-        console.log(`   ⚡ Embed: ${(embedTime/1000).toFixed(2)}s (${(chunkTexts.length/(embedTime/1000)).toFixed(1)} chunks/seg)`);
-        console.log(`   💾 Insert: ${(insertTime/1000).toFixed(2)}s`);
-        console.log(`   🚀 Total: ${totalTime.toFixed(2)}s`);
-        
+      if (insertResponse.data && insertResponse.data.status === 'ok') {
+        console.log(`✅ Documento indexado exitosamente en Qdrant: ${this.metadata.idSentence || 'ID desconocido'}`);
         return {
           success: true,
-          chunks_processed: insertResult.inserted,
-          chunks_failed: insertResult.failed,
-          total_chunks: insertResult.total,
-          embed_time_ms: embedTime,
-          insert_time_ms: insertTime,
-          total_time_ms: embedTime + insertTime,
-          chunks_per_second: Math.round(chunkTexts.length / (embedTime/1000))
+          chunks_processed: points.length,
+          total_chunks: documents.length
         };
       } else {
-        throw new Error(`Inserción ULTRA falló: ${insertResult.failed}/${insertResult.total}`);
+        throw new Error('Respuesta inesperada de Qdrant al insertar puntos');
       }
 
     } catch (error) {
-      console.error(`❌ Error ULTRA indexando (${this.metadata.idSentence}):`, error.message);
-      
-      // Mover a carpeta de errores si es necesario
-      if (error.response && error.response.status === 413 && sourceFilePath) {
-        await this.moveToErrorFolder(sourceFilePath);
-      }
-      
+      console.error(`❌ Error indexando en Qdrant (${this.metadata.idSentence || 'ID desconocido'}):`, error.message);
       throw error;
     }
   }
 
   /**
-   * Mueve archivo a carpeta de errores
+   * Mueve un archivo a la carpeta de errores cuando hay error 413
+   * @param {string} sourceFilePath - Ruta del archivo original
    */
   async moveToErrorFolder(sourceFilePath) {
     try {
-      const errorDir = process.env.FOLDER_ERROR;
+      const errorDir = process.env.FOLDER + '/error';
+      
+      // Crear la carpeta de errores si no existe
       if (!fs.existsSync(errorDir)) {
         fs.mkdirSync(errorDir, { recursive: true });
+        console.log(`📁 Carpeta de errores creada: ${errorDir}`);
       }
       
       const fileName = path.basename(sourceFilePath);
       const destPath = path.join(errorDir, fileName);
       
+      // Mover el archivo
       fs.renameSync(sourceFilePath, destPath);
-      console.log(`📦 Archivo movido a errores: ${fileName}`);
+      console.log(`📦 Archivo movido a carpeta de errores: ${fileName}`);
+      console.log(`   📍 Origen: ${sourceFilePath}`);
+      console.log(`   📍 Destino: ${destPath}`);
       
     } catch (moveError) {
-      console.error(`❌ Error moviendo archivo:`, moveError.message);
+      console.error(`❌ Error moviendo archivo a carpeta de errores:`, moveError.message);
+      console.error(`   📄 Archivo: ${sourceFilePath}`);
     }
   }
 
   /**
-   * Búsqueda ULTRA en Qdrant
+   * Busca documentos similares en Qdrant
+   * @param {string} queryText - Texto de consulta
+   * @param {number} limit - Número máximo de resultados
+   * @param {number} threshold - Umbral de similitud mínima
    */
   async search(queryText, limit = 10, threshold = 0.7) {
     try {
-      // Generar embedding para consulta
-      const response = await this.axiosInstance.post(this.embeddingUrl, {
-        inputs: queryText
-      });
-
-      let queryEmbedding;
-      if (Array.isArray(response.data) && response.data.length === 1 && Array.isArray(response.data[0])) {
-        queryEmbedding = response.data[0];
-      } else {
-        throw new Error('Formato de respuesta inesperado en búsqueda');
-      }
+      // Generar embedding para la consulta
+      const queryEmbedding = await this.generateEmbedding(queryText);
 
       // Buscar en Qdrant
       const searchResponse = await axios.post(`${this.qdrantUrl}/collections/${this.collectionName}/points/search`, {
@@ -431,7 +301,9 @@ class IndexarQdrant {
         with_payload: true,
         with_vector: false
       }, {
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
       if (searchResponse.data && searchResponse.data.result) {
@@ -440,7 +312,7 @@ class IndexarQdrant {
           results: searchResponse.data.result
         };
       } else {
-        throw new Error('Respuesta inesperada de Qdrant en búsqueda');
+        throw new Error('Respuesta inesperada de Qdrant en la búsqueda');
       }
 
     } catch (error) {
