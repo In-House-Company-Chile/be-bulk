@@ -2,7 +2,7 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
-const IndexarQdrant = require('./IndexarQdrant');
+const IndexarQdrant = require('./IndexarQdrantJson');
 
 /**
  * Clase para procesar archivos JSON masivos y indexar documentos en Qdrant
