@@ -319,14 +319,7 @@ class ProcesarDocumentosJSON {
         const metadata = {
             _id: doc._id?.$oid || `doc_${doc.idNorm}`, // ID único para el documento
             idNorm: doc.idNorm,
-            compuesto: tiposNumeros.compuesto || '',
-            titulo_norma: meta.titulo_norma || '',
-            organismos: meta.organismos || [],
-            fecha_publicacion: meta.fecha_publicacion || '',
-            fecha_promulgacion: meta.fecha_promulgacion || '',
-            tipo_version_s: meta.tipo_version_s || '',
-            inicio_vigencia: meta.vigencia?.inicio_vigencia || '',
-            fin_vigencia: meta.vigencia?.fin_vigencia || '',
+            ...meta,
             tag: 'norma'
         };
 
