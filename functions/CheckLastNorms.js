@@ -3,8 +3,8 @@ const LogsError = require('./LogsError');
 const MergeHtml = require('./MergeHtml');
 const UpdateLastProcess = require('./UpdateLastProcess');
 const IndexarMongo = require('./IndexarMongo');
-const IndexarPinecone = require('./IndexarPinecone');
 const LoadNormasFromJSON = require('./LoadNormasFromJSON');
+const IndexarQdrantNorm = require('./IndexarQdrantNorm');
 
 const fs = require('fs');
 const axios = require('axios');
@@ -14,7 +14,7 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 class CheckLastNorms {
     constructor(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, dbName, dbCollection, namespace) {
-        this.ID_NORM = 1211458; 
+        this.ID_NORM = 1215894; 
         this.HORARIO_BLOQUEADO = HORARIO_BLOQUEADO; 
         this.PAUSA_CADA_PETICIONES = PAUSA_CADA_PETICIONES; 
         this.PAUSA_MINUTOS = PAUSA_MINUTOS; 
@@ -68,7 +68,7 @@ class CheckLastNorms {
                         if (indexMongo !== 'OK') {
                             fs.writeFileSync(`norms/${this.ID_NORM}.json`, JSON.stringify(jsonData, null, 2));
                             LoadNormasFromJSON.create(jsonData, 'facets')
-                            await IndexarPinecone.create(jsonData, 'bigdata', this.namespace);
+                            await IndexarQdrantNorm.create(jsonData, 'normas');
                         }
                         // Guardar el último ID procesado
                         UpdateLastProcess.create(this.ID_NORM, this.LOG_DIR);
