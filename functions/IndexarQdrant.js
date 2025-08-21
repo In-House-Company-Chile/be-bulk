@@ -2,16 +2,22 @@ require('dotenv').config();
 const { RecursiveCharacterTextSplitter } = require('@langchain/textsplitters');
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
+const fs = require('fs').promises;
+const path = require('path');
 
 class IndexarQdrant {
   constructor(doc, collectionName, metadata, options = {}) {
     this.doc = doc;
     this.collectionName = collectionName;
     this.metadata = metadata;
+    this.filePath = options.filePath || null; // Ruta del archivo original
     
     // URLs de servicios
     this.embeddingUrl = options.embeddingUrl || 'https://ms-vector.sandbox.governare.ai/embed';
     this.qdrantUrl = options.qdrantUrl || 'http://localhost:6333';
+    
+    // Carpeta para archivos con errores
+    this.errorFolder = process.env.ERROR_FOLDER || './error_files';
     
     // Configuración OPTIMIZADA PARA RTX 3060
     this.vectorDimension = options.vectorDimension || 1024;
@@ -39,6 +45,61 @@ class IndexarQdrant {
     return new IndexarQdrant(doc, collectionName, metadata, options).indexar();
   }
 
+  // Función para mover archivos con errores a carpeta específica
+  async moveFileToErrorFolder(error) {
+    if (!this.filePath) {
+      console.warn('⚠️  No se especificó filePath, no se puede mover el archivo con error');
+      return false;
+    }
+
+    try {
+      // Asegurar que la carpeta de errores existe
+      await fs.mkdir(this.errorFolder, { recursive: true });
+      
+      // Obtener el nombre del archivo original
+      const fileName = path.basename(this.filePath);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const errorFileName = `${timestamp}_${fileName}`;
+      const errorFilePath = path.join(this.errorFolder, errorFileName);
+      
+      // Verificar si el archivo original existe
+      try {
+        await fs.access(this.filePath);
+      } catch (accessError) {
+        console.warn(`⚠️  Archivo original no encontrado: ${this.filePath}`);
+        return false;
+      }
+      
+      // Mover el archivo a la carpeta de errores
+      await fs.rename(this.filePath, errorFilePath);
+      
+      // Crear un archivo de log con el error
+      const errorLogPath = path.join(this.errorFolder, `${timestamp}_${path.parse(fileName).name}_error.log`);
+      const errorInfo = {
+        originalFile: this.filePath,
+        movedTo: errorFilePath,
+        timestamp: new Date().toISOString(),
+        error: {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        },
+        metadata: this.metadata,
+        collectionName: this.collectionName
+      };
+      
+      await fs.writeFile(errorLogPath, JSON.stringify(errorInfo, null, 2));
+      
+      console.log(`📁 Archivo movido a carpeta de errores: ${errorFilePath}`);
+      console.log(`📋 Log de error creado: ${errorLogPath}`);
+      
+      return true;
+    } catch (moveError) {
+      console.error('❌ Error al mover archivo a carpeta de errores:', moveError.message);
+      return false;
+    }
+  }
+
   // Verificar/crear colección en Qdrant
   async ensureCollection() {
     try {
@@ -46,13 +107,13 @@ class IndexarQdrant {
       const response = await axios.get(`${this.qdrantUrl}/collections/${this.collectionName}`);
       
       if (response.data.status === 'ok') {
-        console.log(`✅ Colección '${this.collectionName}' ya existe`);
+        // console.log(`✅ Colección '${this.collectionName}' ya existe`);
         return true;
       }
     } catch (error) {
       if (error.response && error.response.status === 404) {
         // La colección no existe, crearla
-        console.log(`📦 Creando colección '${this.collectionName}'...`);
+        // console.log(`📦 Creando colección '${this.collectionName}'...`);
         
         const collectionConfig = {
           vectors: {
@@ -79,7 +140,7 @@ class IndexarQdrant {
           { headers: { 'Content-Type': 'application/json' } }
         );
 
-        console.log(`✅ Colección '${this.collectionName}' creada exitosamente`);
+        // console.log(`✅ Colección '${this.collectionName}' creada exitosamente`);
         return true;
       }
       
@@ -153,7 +214,7 @@ class IndexarQdrant {
       }
     } catch (error) {
       // Fallback: procesar uno por uno
-      console.log('⚠️  Procesamiento en lote falló, procesando individualmente...');
+      // console.log('⚠️  Procesamiento en lote falló, procesando individualmente...');
       const embeddings = [];
       for (const text of texts) {
         const embedding = await this.getEmbedding(text);
@@ -187,7 +248,7 @@ class IndexarQdrant {
 
   async indexar() {
     try {
-      console.log('🚀 Iniciando indexación en Qdrant...');
+      // console.log('🚀 Iniciando indexación en Qdrant...');
       
       // Asegurar que la colección existe
       await this.ensureCollection();
@@ -200,13 +261,13 @@ class IndexarQdrant {
       });
 
       const chunks = await textSplitter.splitText(this.doc);
-      console.log(`📄 Procesando ${chunks.length} chunks para indexar...`);
+      // console.log(`📄 Procesando ${chunks.length} chunks para indexar...`);
 
       // Generar ID único para el documento
       const docId = this.metadata.idNorm || `doc_${uuidv4()}`;
       
       // PROCESAMIENTO ULTRA PARALELO CON RTX 3060
-      console.log(`🚀 Procesamiento ultra paralelo: ${this.embeddingBatchSize} chunks por batch`);
+      // console.log(`🚀 Procesamiento ultra paralelo: ${this.embeddingBatchSize} chunks por batch`);
       
       const allPromises = [];
       const batchPromises = [];
@@ -234,7 +295,7 @@ class IndexarQdrant {
         totalProcessed += this.processBatchResults(results);
       }
       
-      console.log(`✅ Total chunks procesados: ${totalProcessed}/${chunks.length}`);
+      // console.log(`✅ Total chunks procesados: ${totalProcessed}/${chunks.length}`);
 
       // Verificar el conteo final
       const collectionInfo = await this.httpClient.get(
@@ -243,10 +304,10 @@ class IndexarQdrant {
       
       const vectorCount = collectionInfo.data.result.vectors_count;
       
-      console.log(`\n✅ Indexación completada exitosamente:`);
-      console.log(`   📊 Documento: ${docId}`);
-      console.log(`   📝 Chunks procesados: ${chunks.length}`);
-      console.log(`   🗄️  Total vectores en colección: ${vectorCount}`);
+      // console.log(`\n✅ Indexación completada exitosamente:`);
+      // console.log(`   📊 Documento: ${docId}`);
+      // console.log(`   📝 Chunks procesados: ${chunks.length}`);
+      // console.log(`   🗄️  Total vectores en colección: ${vectorCount}`);
       
       return {
         success: true,
@@ -257,6 +318,18 @@ class IndexarQdrant {
 
     } catch (error) {
       console.error('❌ Error durante la indexación:', error);
+      
+      // Mover archivo a carpeta de errores si está especificado
+      if (this.filePath) {
+        // console.log('🔄 Moviendo archivo con error a carpeta específica...');
+        const moved = await this.moveFileToErrorFolder(error);
+        if (moved) {
+          console.log('✅ Archivo movido exitosamente a carpeta de errores');
+        } else {
+          console.log('⚠️  No se pudo mover el archivo a la carpeta de errores');
+        }
+      }
+      
       throw error;
     }
   }
@@ -264,7 +337,7 @@ class IndexarQdrant {
   // Método optimizado para procesar un batch
   async processBatchOptimized(batchChunks, docId, startIndex, totalChunks, batchIndex) {
     try {
-      console.log(`🔄 Batch ${batchIndex + 1}: ${batchChunks.length} chunks`);
+      // console.log(`🔄 Batch ${batchIndex + 1}: ${batchChunks.length} chunks`);
       
       // Obtener embeddings para el lote
       const embeddings = await this.getEmbeddingsBatch(batchChunks);
@@ -289,6 +362,12 @@ class IndexarQdrant {
       return points.length;
     } catch (error) {
       console.error(`❌ Error en batch ${batchIndex}:`, error.message);
+      
+      // Si es un error crítico y tenemos filePath, logearlo para posible movimiento
+      if (this.filePath && error.message.includes('ECONNREFUSED') || error.message.includes('timeout')) {
+        console.warn(`⚠️  Error crítico en batch ${batchIndex} para archivo: ${this.filePath}`);
+      }
+      
       return 0;
     }
   }
