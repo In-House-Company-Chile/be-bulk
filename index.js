@@ -1,7 +1,7 @@
 const fs = require('fs');
-const CheckLastNorms = require('./functions/CheckLastNorms');
+const CheckLastNorms = require('./functions/norms/CheckLastNorms');
 const nodecron = require('node-cron');
-const LoadNormasFromDir = require('./functions/LoadNormasFromDir');
+const LoadNormasFromDir = require('./functions/norms/LoadNormasFromDir');
 
 const HORARIO_BLOQUEADO = { inicio: 0, fin: 6 };
 const PAUSA_CADA_PETICIONES = 100;

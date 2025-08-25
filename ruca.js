@@ -15,26 +15,10 @@ const { MongoClient } = require('mongodb');
 const uri = process.env.MONGO_URL;
 const client = new MongoClient(uri);
 
-const BASE_BJUD_URL = process.env.BASE_BJUD_URL
-const ID_BUSCADOR = process.env.ID_BUSCADOR
 const ELEMENT_PER_PAGE = parseInt(process.env.ELEMENT_PER_PAGE)
 const PAGE = parseInt(process.env.PAGE)
 const FINAL_PAGE = parseInt(process.env.FINAL_PAGE)
 
-const config = {
-  PINECONE: {
-    API_KEY: process.env.PINECONE_API_KEY // Asegúrate de tener esta variable de entorno
-  }
-};
-
-const instruction = "Eres un asistente jurídico especializado en sentencias judiciales. Responde de manera precisa y fundamentada basándote únicamente en la información proporcionada en el contexto.";
-
-const res = [
-  '3572898', '3572909',
-  '3572933', '3572935',
-  '3572949', '3572951',
-  '3572960', '3572962'
-]
 
 async function getCookies() {
   const urlBase = "https://juris.pjud.cl/busqueda?Sentencias_Civiles";
@@ -237,86 +221,6 @@ async function sessionConnection() {
     throw new Error("Error al ejecutar la función CheckNorms()");
   }
 };
-
-
-/* puedes hacer que si una peticion le da timeout no avance a la siguiente pagina? que lo vuelva a intentar con unas nuevas cookies, el intento debe ser maximo de 3 veces de lo contrario terminar la ejecucion mostrando los consolelog finales de resumen */
-
-
-
-const chat = async (model, temperature, indexName, namespace, topK, metadata, userMessage) => {
-  try {
-    const pc = new Pinecone({ apiKey: config.PINECONE.API_KEY });
-    const llm = new ChatOpenAI({ model: model, temperature: temperature });
-    const queryEmbedding = await new OpenAIEmbeddings({ model: 'text-embedding-3-large', dimensions: 3072 }).embedQuery(userMessage);
-
-    const index = pc.index(indexName);
-
-    const prompt = PromptTemplate.fromTemplate(`${instruction}. {context} pregunta: {input}`);
-    const chain = loadQAStuffChain(llm, { prompt: prompt });
-
-    let queryResponse = await index.namespace(namespace).query({
-      vector: queryEmbedding,
-      topK: topK,
-      // filter: metadata,
-      includeMetadata: true,
-    });
-
-    const concatenatedText = queryResponse.matches.map((match) => JSON.stringify(match.metadata)).join(" \n\n");
-    // const concatenatedText = queryResponse.matches.map((match) => match.metadata.text).join(" \n\n");
-
-    // Crear mapa para eliminar duplicados y mantener el score más alto
-    const uniqueChunks = new Map();
-
-    queryResponse.matches.forEach((match) => {
-      const chunkContent = JSON.stringify(match.metadata.text);
-      const currentScore = match.score;
-
-      // Si no existe o el score actual es mayor, actualizar
-      if (!uniqueChunks.has(chunkContent) || uniqueChunks.get(chunkContent).score < currentScore) {
-        uniqueChunks.set(chunkContent, {
-          score: currentScore,
-          chunk: chunkContent,
-          metadata: match.metadata
-        });
-      }
-    });
-
-    // Convertir el Map a array y ordenar por score descendente
-    const concatenatedTextWithScore = Array.from(uniqueChunks.values())
-      .sort((a, b) => b.score - a.score);
-
-    const result = await chain.invoke({
-      input_documents: [{ pageContent: concatenatedText }],
-      input: userMessage,
-    });
-
-    return {
-      result: result.text,
-      concatenatedTextWithScore: concatenatedTextWithScore,
-      // queryResponse: queryResponse.matches,
-      // concatenatedText: concatenatedText,
-    };
-  } catch (e) {
-    console.error("🚨 Error en función chat:", e.message);
-    throw e;
-  }
-}
-
-// Función principal para ejecutar el chat
-async function ejecutarChat() {
-  try {
-    console.log("🤖 Iniciando consulta al chat...");
-    const resultado = await chat('gpt-4o-mini', 0, 'bigdata', 'sentencias', 10, {}, '¿en que sentencia habla del amparado adolecente?');
-    console.log("📝 Respuesta:", resultado);
-    fs.writeFileSync('resultado.json', JSON.stringify(resultado, null, 2));
-  } catch (error) {
-    console.error("❌ Error al ejecutar chat:", error.message);
-  }
-}
-
-// Ejecutar el chat
-// ejecutarChat();
-
 
 
 async function getData(idBuscadorBase, refererUrl) {
@@ -807,7 +711,7 @@ async function indexarMongo(dbName, collection) {
 
 
 
-getData(ID_BUSCADOR, BASE_BJUD_URL)
+// getData(ID_BUSCADOR, BASE_BJUD_URL)
 // indexarTodasLasSentencias();
 // indexarMongo('buscadorDB', 'jurisprudencia');
 
