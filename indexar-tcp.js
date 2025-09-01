@@ -269,7 +269,7 @@ async function processWorker(queue, cacheManager, results, BASE_NAME) {
         await IndexarQdrant.create(
           jsonData.sentenciaTribunal.plain_text,
           QDRANT_COLLECTION,
-          {idSentence: jsonData.sentenciaTribunal.id, ...metadata},
+          {idSentence: String(jsonData.sentenciaTribunal.id), ...metadata},
           {
             embeddingBatchSize: PARALLELIZATION_CONFIG.EMBEDDING_BATCH_SIZE,
             embeddingUrl: PARALLELIZATION_CONFIG.EMBEDDING_API_URL,
@@ -287,7 +287,7 @@ async function processWorker(queue, cacheManager, results, BASE_NAME) {
         await IndexarQdrant.create(
           jsonData.sentenciaCA.plain_text,
           QDRANT_COLLECTION,
-          {idSentence: jsonData.sentenciaCA.id, ...metadata},
+          {idSentence: String(jsonData.sentenciaCA.id), ...metadata},
           {
             embeddingBatchSize: PARALLELIZATION_CONFIG.EMBEDDING_BATCH_SIZE,
             embeddingUrl: PARALLELIZATION_CONFIG.EMBEDDING_API_URL,
@@ -305,7 +305,7 @@ async function processWorker(queue, cacheManager, results, BASE_NAME) {
         await IndexarQdrant.create(
           jsonData.sentenciaCS.plain_text,
           QDRANT_COLLECTION,
-          {idSentence: jsonData.sentenciaCS.id, ...metadata},
+          {idSentence: String(jsonData.sentenciaCS.id), ...metadata},
           {
             embeddingBatchSize: PARALLELIZATION_CONFIG.EMBEDDING_BATCH_SIZE,
             embeddingUrl: PARALLELIZATION_CONFIG.EMBEDDING_API_URL,
