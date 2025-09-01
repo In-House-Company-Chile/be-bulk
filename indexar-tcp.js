@@ -267,7 +267,7 @@ async function processWorker(queue, cacheManager, results, BASE_NAME) {
 
       if (jsonData.sentenciaTribunal !== null) {
         await IndexarQdrant.create(
-          jsonData.sentenciaTribunal,
+          jsonData.sentenciaTribunal.plain_text,
           QDRANT_COLLECTION,
           {idSentence: jsonData.sentenciaTribunal.id, ...metadata},
           {
@@ -285,7 +285,7 @@ async function processWorker(queue, cacheManager, results, BASE_NAME) {
 
       if (jsonData.sentenciaCA !== null) {
         await IndexarQdrant.create(
-          jsonData.sentenciaCA,
+          jsonData.sentenciaCA.plain_text,
           QDRANT_COLLECTION,
           {idSentence: jsonData.sentenciaCA.id, ...metadata},
           {
@@ -303,7 +303,7 @@ async function processWorker(queue, cacheManager, results, BASE_NAME) {
       
       if (jsonData.sentenciaCS !== null) {
         await IndexarQdrant.create(
-          jsonData.sentenciaCS,
+          jsonData.sentenciaCS.plain_text,
           QDRANT_COLLECTION,
           {idSentence: jsonData.sentenciaCS.id, ...metadata},
           {
