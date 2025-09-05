@@ -232,7 +232,7 @@ class IndexarQdrant {
         { points },
         {
           headers: { 'Content-Type': 'application/json' },
-          timeout: 30000 // Timeout más largo
+          timeout: 120000   // Timeout más largo
         }
       );
 
@@ -300,7 +300,7 @@ class IndexarQdrant {
 
       // Verificar el conteo final
       const collectionInfo = await this.httpClient.get(
-        `${this.qdrantUrl}/collections/${this.collectionName}`, { timeout: 30000 }
+        `${this.qdrantUrl}/collections/${this.collectionName}`, { timeout: 120000   }
       );
       
       const vectorCount = collectionInfo.data.result.vectors_count;
@@ -426,7 +426,7 @@ class IndexarQdrant {
     try {
       // Cliente HTTP optimizado para búsqueda
       const httpClient = require('axios').create({
-        timeout: 30000,
+        timeout: 120000  ,
         httpAgent: new (require('http').Agent)({
           keepAlive: true,
           maxSockets: 50
@@ -454,7 +454,7 @@ class IndexarQdrant {
           with_payload: true,
           with_vector: false
         },
-        { headers: { 'Content-Type': 'application/json' }, timeout: 30000 }
+        { headers: { 'Content-Type': 'application/json' }, timeout: 120000   }
       );
 
       return searchResponse.data.result;
