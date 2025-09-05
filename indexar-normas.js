@@ -13,27 +13,27 @@ const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION || 'jurisprudencia';
 const SENTENCIAS_DIR = process.env.SENTENCIAS_DIR;
 const VECTORIZED_DIR = process.env.VECTORIZED_DIR;
 
-// OPTIMIZACIÓN ULTRA AGRESIVA: Agentes HTTP para RTX 3060
+// CONFIGURACIÓN CONSERVADORA: Agentes HTTP optimizados para estabilidad
 const httpAgent = new http.Agent({
   keepAlive: true,
-  keepAliveMsecs: 500,  // Reducido para más velocidad
-  maxSockets: 500,      // Aumentado agresivamente
-  maxFreeSockets: 100,  // Más sockets libres
-  timeout: 120000,      // Timeout más largo para batches grandes
+  keepAliveMsecs: 2000,  // Más tiempo para mantener conexiones
+  maxSockets: 50,        // Reducido para evitar saturación
+  maxFreeSockets: 10,    // Menos sockets libres
+  timeout: 300000,       // 5 minutos de timeout
 });
 
 const httpsAgent = new https.Agent({
   keepAlive: true,
-  keepAliveMsecs: 500,
-  maxSockets: 500,
-  maxFreeSockets: 100,
-  timeout: 120000,
+  keepAliveMsecs: 2000,
+  maxSockets: 50,
+  maxFreeSockets: 10,
+  timeout: 300000,
 });
 
-// Configurar axios globalmente
+// Configurar axios globalmente con timeouts largos
 axios.defaults.httpAgent = httpAgent;
 axios.defaults.httpsAgent = httpsAgent;
-axios.defaults.timeout = 30000;
+axios.defaults.timeout = 120000; // 2 minutos
 
 const config = {
   QDRANT: {
@@ -41,15 +41,15 @@ const config = {
   }
 };
 
-// CONFIGURACIÓN OPTIMIZADA BASADA EN TESTS REALES RTX 3060
+// CONFIGURACIÓN CONSERVADORA PARA ESTABILIDAD
 const PARALLELIZATION_CONFIG = {
-  MAX_CONCURRENT_DOCS: 40,        // Optimizado para evitar saturación
-  MAX_CONCURRENT_EMBEDDINGS: 25,  // Basado en test de concurrencia (143 req/sec)
-  EMBEDDING_BATCH_SIZE: 128,      // ÓPTIMO: 591.9 texts/sec confirmado
+  MAX_CONCURRENT_DOCS: 5,         // Muy reducido para estabilidad
+  MAX_CONCURRENT_EMBEDDINGS: 3,   // Pocas operaciones paralelas
+  EMBEDDING_BATCH_SIZE: 20,       // Batches pequeños para evitar timeouts
   EMBEDDING_API_URL: process.env.EMBEDDING_API_URL || 'http://localhost:11441/embed',
   TARGET_DIMENSION: 1024,
-  QDRANT_BATCH_SIZE: 200,         // Reducido para evitar errores 400
-  MAX_CONCURRENT_QDRANT_UPSERTS: 10 // Reducido para estabilidad
+  QDRANT_BATCH_SIZE: 50,          // Batches pequeños para Qdrant
+  MAX_CONCURRENT_QDRANT_UPSERTS: 2 // Muy pocas operaciones concurrentes
 };
 
 /**
@@ -73,37 +73,37 @@ function createMetadataByType(jsonData, tipoBase) {
   }
 }
 
-// CONFIGURACIÓN OPTIMIZADA BASADA EN TESTS RTX 3060
+// CONFIGURACIÓN CONSERVADORA PARA EVITAR TIMEOUTS
 const OPTIMIZATION_CONFIGS = {
   HEAVY_LOAD: {
-    BATCH_SIZE: 100,        // Optimizado para evitar saturación
-    BATCH_PAUSE_MS: 50,     // Pausa para estabilidad
-    SOCKET_TIMEOUT: 60000,  // Timeout conservador
-    MAX_RETRIES: 3
+    BATCH_SIZE: 10,         // Muy pequeño para evitar saturación
+    BATCH_PAUSE_MS: 2000,   // Pausa larga para dar respiro
+    SOCKET_TIMEOUT: 300000, // 5 minutos de timeout
+    MAX_RETRIES: 5
   },
   MEDIUM_LOAD: {
-    BATCH_SIZE: 75,
-    BATCH_PAUSE_MS: 75,
-    SOCKET_TIMEOUT: 45000,
-    MAX_RETRIES: 3
+    BATCH_SIZE: 15,
+    BATCH_PAUSE_MS: 1500,
+    SOCKET_TIMEOUT: 240000, // 4 minutos
+    MAX_RETRIES: 4
   },
   LIGHT_LOAD: {
-    BATCH_SIZE: 50,
-    BATCH_PAUSE_MS: 100,
-    SOCKET_TIMEOUT: 30000,
-    MAX_RETRIES: 2
+    BATCH_SIZE: 20,
+    BATCH_PAUSE_MS: 1000,
+    SOCKET_TIMEOUT: 180000, // 3 minutos
+    MAX_RETRIES: 3
   }
 };
 
 function getOptimalConfig(totalFiles) {
   if (totalFiles > 5000) {
-    console.log('🔥 Configuración HEAVY_LOAD detectada (>5k archivos) - RTX 3060 Optimized');
+    console.log('🐢 Configuración HEAVY_LOAD detectada (>5k archivos) - Modo Estable');
     return OPTIMIZATION_CONFIGS.HEAVY_LOAD;
   } else if (totalFiles > 500) {
-    console.log('⚡ Configuración MEDIUM_LOAD detectada (500-5k archivos) - RTX 3060 Optimized');
+    console.log('🐢 Configuración MEDIUM_LOAD detectada (500-5k archivos) - Modo Estable');
     return OPTIMIZATION_CONFIGS.MEDIUM_LOAD;
   } else {
-    console.log('💡 Configuración LIGHT_LOAD detectada (<500 archivos) - RTX 3060 Optimized');
+    console.log('🐢 Configuración LIGHT_LOAD detectada (<500 archivos) - Modo Estable');
     return OPTIMIZATION_CONFIGS.LIGHT_LOAD;
   }
 }
@@ -176,7 +176,33 @@ function createPerformanceMonitor() {
 }
 
 /**
- * NUEVO: Pre-calentar el servicio de embeddings
+ * Función para agregar delays entre operaciones
+ */
+async function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Función de reintento con backoff exponencial
+ */
+async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      
+      const delay = baseDelay * Math.pow(2, attempt - 1);
+      console.log(`⚠️ Intento ${attempt} falló, reintentando en ${delay}ms...`);
+      await sleep(delay);
+    }
+  }
+}
+
+/**
+ * Pre-calentar el servicio de embeddings con reintentos
  */
 async function warmupEmbeddingService() {
   console.log('🔥 Calentando servicio de embeddings...');
@@ -186,13 +212,16 @@ async function warmupEmbeddingService() {
       'Segundo texto de prueba para verificar batch processing'
     ];
     
-    const response = await axios.post(
-      PARALLELIZATION_CONFIG.EMBEDDING_API_URL,
-      { inputs: testTexts },
-      { timeout: 30000 }
-    );
+    const response = await retryWithBackoff(async () => {
+      return await axios.post(
+        PARALLELIZATION_CONFIG.EMBEDDING_API_URL,
+        { inputs: testTexts },
+        { timeout: 60000 } // Timeout más largo
+      );
+    }, 3, 2000);
     
     console.log('✅ Servicio de embeddings listo');
+    await sleep(1000); // Pausa después del warmup
     return true;
   } catch (error) {
     console.error('❌ Error al calentar servicio:', error.message);
@@ -201,7 +230,7 @@ async function warmupEmbeddingService() {
 }
 
 /**
- * OPTIMIZADO: Procesamiento de documentos con cola de trabajo
+ * PROCESAMIENTO ESTABLE: Documentos uno por uno con delays
  */
 async function processDocumentQueue(queue, cacheManager, vectorizedDir, BASE_NAME, performanceMonitor) {
   const results = {
@@ -212,80 +241,80 @@ async function processDocumentQueue(queue, cacheManager, vectorizedDir, BASE_NAM
     totalEmbeddingTime: 0
   };
 
-  // Procesar en paralelo máximo
-  const workers = [];
-  const maxWorkers = PARALLELIZATION_CONFIG.MAX_CONCURRENT_DOCS;
-  
-  for (let i = 0; i < maxWorkers; i++) {
-    workers.push(processWorker(queue, cacheManager, results, BASE_NAME));
-  }
-
-  await Promise.all(workers);
-  
-  return results;
-}
-
-/**
- * Worker para procesar documentos de la cola
- */
-async function processWorker(queue, cacheManager, results, BASE_NAME) {
-  while (queue.length > 0) {
-    const { archivo, rutaOrigen } = queue.shift();
+  // Procesar documentos secuencialmente para evitar saturación
+  for (let i = 0; i < queue.length; i++) {
+    const { archivo, rutaOrigen } = queue[i];
     if (!archivo) continue;
 
-    const docStartTime = Date.now();
+    console.log(`📄 Procesando documento ${i + 1}/${queue.length}: ${archivo}`);
 
     try {
-      const contenido = fs.readFileSync(rutaOrigen, 'utf8');
-      const jsonData = JSON.parse(contenido);
-
-      // Verificar texto
-      if (!jsonData.planeText || jsonData.planeText.trim() === '') {
-        continue;
-      }
-
-      // Verificar duplicados usando caché
-/*       const isDuplicate = await cacheManager.exists(jsonData.id);
-      if (isDuplicate) {
-        results.duplicates.push({ archivo, rutaOrigen });
-        continue;
-      } */
-
-      // Crear metadata
-      const metadata = createMetadataByType(jsonData, BASE_NAME);
-
-      // Vectorizar
-      const embeddingStartTime = Date.now();
+      await processDocumentWithRetry(archivo, rutaOrigen, results, BASE_NAME, cacheManager);
       
-      const indexResult = await IndexarQdrant.create(
-        jsonData.planeText, 
-        QDRANT_COLLECTION, 
-        metadata,
-        {
-          embeddingBatchSize: PARALLELIZATION_CONFIG.EMBEDDING_BATCH_SIZE,
-          embeddingUrl: PARALLELIZATION_CONFIG.EMBEDDING_API_URL,
-          qdrantUrl: config.QDRANT.URL,
-          vectorDimension: PARALLELIZATION_CONFIG.TARGET_DIMENSION,
-          upsertBatchSize: PARALLELIZATION_CONFIG.QDRANT_BATCH_SIZE,
-          maxConcurrentUpserts: PARALLELIZATION_CONFIG.MAX_CONCURRENT_QDRANT_UPSERTS
-        }
-      );
-
-      const docEndTime = Date.now();
-      const embeddingTime = docEndTime - embeddingStartTime;
-
-      // Agregar ID al caché
-      // await cacheManager.add(jsonData.id);
-
-      results.success.push({ archivo, rutaOrigen });
-      results.totalChunks += (indexResult?.chunks || 0);
-      results.totalEmbeddingTime += embeddingTime;
-
+      // Pausa entre documentos para dar respiro al sistema
+      if (i < queue.length - 1) {
+        await sleep(500); // 500ms entre documentos
+      }
     } catch (error) {
       console.error(`❌ Error procesando ${archivo}:`, error.message);
       results.errors.push({ archivo, error: error.message });
     }
   }
+  
+  return results;
+}
+
+/**
+ * Procesar un documento individual con reintentos
+ */
+async function processDocumentWithRetry(archivo, rutaOrigen, results, BASE_NAME, cacheManager) {
+  const docStartTime = Date.now();
+
+  return await retryWithBackoff(async () => {
+    const contenido = fs.readFileSync(rutaOrigen, 'utf8');
+    const jsonData = JSON.parse(contenido);
+
+    // Verificar texto
+    if (!jsonData.planeText || jsonData.planeText.trim() === '') {
+      console.log(`⚠️ Documento ${archivo} sin texto, saltando...`);
+      return;
+    }
+
+    // Crear metadata
+    const metadata = createMetadataByType(jsonData, BASE_NAME);
+
+    // Vectorizar con configuración conservadora
+    const embeddingStartTime = Date.now();
+    
+    console.log(`🔄 Indexando documento: ${archivo}`);
+    
+    const indexResult = await IndexarQdrant.create(
+      jsonData.planeText, 
+      QDRANT_COLLECTION, 
+      metadata,
+      {
+        embeddingBatchSize: PARALLELIZATION_CONFIG.EMBEDDING_BATCH_SIZE,
+        embeddingUrl: PARALLELIZATION_CONFIG.EMBEDDING_API_URL,
+        qdrantUrl: config.QDRANT.URL,
+        vectorDimension: PARALLELIZATION_CONFIG.TARGET_DIMENSION,
+        upsertBatchSize: PARALLELIZATION_CONFIG.QDRANT_BATCH_SIZE,
+        maxConcurrentUpserts: PARALLELIZATION_CONFIG.MAX_CONCURRENT_QDRANT_UPSERTS
+      }
+    );
+
+    const docEndTime = Date.now();
+    const embeddingTime = docEndTime - embeddingStartTime;
+
+    results.success.push({ archivo, rutaOrigen });
+    results.totalChunks += (indexResult?.chunks || indexResult?.chunksProcessed || 0);
+    results.totalEmbeddingTime += embeddingTime;
+
+    console.log(`✅ Documento ${archivo} procesado exitosamente en ${embeddingTime}ms`);
+    
+    // Pausa pequeña después de procesar cada documento
+    await sleep(200);
+    
+  }, 3, 2000); // 3 reintentos con backoff exponencial
 }
 
 /**
@@ -314,12 +343,13 @@ async function indexarQdrant(sentenciasDir, vectorizedDir) {
       return;
     }
 
-    console.log(`\n🚀 INICIANDO INDEXACIÓN QDRANT ULTRA OPTIMIZADA`);
+    console.log(`\n🐢 INICIANDO INDEXACIÓN QDRANT MODO ESTABLE`);
     console.log(`📂 Total archivos: ${archivos.length}`);
-    console.log(`\n⚡ Configuración de paralelización:`);
+    console.log(`\n🔧 Configuración conservadora:`);
     console.log(`   - Documentos concurrentes: ${PARALLELIZATION_CONFIG.MAX_CONCURRENT_DOCS}`);
     console.log(`   - Embeddings paralelos: ${PARALLELIZATION_CONFIG.MAX_CONCURRENT_EMBEDDINGS}`);
     console.log(`   - Batch size: ${PARALLELIZATION_CONFIG.EMBEDDING_BATCH_SIZE}`);
+    console.log(`   - Modo: SECUENCIAL con delays y reintentos`);
 
     // Calentar servicio
     await warmupEmbeddingService();
@@ -412,9 +442,10 @@ async function indexarQdrant(sentenciasDir, vectorizedDir) {
         }
       );
 
-      // Pausa mínima entre lotes
+      // Pausa entre lotes para dar respiro al sistema
       if (loteIndex < archivosEnLotes.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, optimalConfig.BATCH_PAUSE_MS));
+        console.log(`⏸️ Pausa de ${optimalConfig.BATCH_PAUSE_MS}ms entre lotes...`);
+        await sleep(optimalConfig.BATCH_PAUSE_MS);
       }
     }
 

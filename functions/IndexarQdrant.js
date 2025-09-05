@@ -23,20 +23,20 @@ class IndexarQdrant {
     this.vectorDimension = options.vectorDimension || 1024;
     this.chunkSize = options.chunkSize || 800;
     this.chunkOverlap = options.chunkOverlap || 80;
-    this.embeddingBatchSize = options.embeddingBatchSize || 128; // Aumentado para GPU
-    this.upsertBatchSize = options.upsertBatchSize || 500;       // Batches más grandes
-    this.maxConcurrentUpserts = options.maxConcurrentUpserts || 20; // Más concurrencia
+    this.embeddingBatchSize = options.embeddingBatchSize || 20;  // Reducido para estabilidad
+    this.upsertBatchSize = options.upsertBatchSize || 50;        // Batches pequeños
+    this.maxConcurrentUpserts = options.maxConcurrentUpserts || 2; // Muy poca concurrencia
     
-    // Cliente HTTP optimizado para alta concurrencia
+    // Cliente HTTP optimizado para estabilidad
     this.httpClient = require('axios').create({
-      timeout: 120000, // Timeout más largo
+      timeout: 300000, // 5 minutos de timeout
       maxContentLength: Infinity,
       maxBodyLength: Infinity,
       httpAgent: new (require('http').Agent)({
         keepAlive: true,
-        keepAliveMsecs: 1000,
-        maxSockets: 200,  // Más sockets
-        maxFreeSockets: 50
+        keepAliveMsecs: 3000,
+        maxSockets: 20,   // Reducido para estabilidad
+        maxFreeSockets: 5
       })
     });
   }
@@ -100,57 +100,81 @@ class IndexarQdrant {
     }
   }
 
-  // Verificar/crear colección en Qdrant
-  async ensureCollection() {
-    try {
-      // Verificar si la colección existe
-      const response = await axios.get(`${this.qdrantUrl}/collections/${this.collectionName}`);
-      
-      if (response.data.status === 'ok') {
-        // console.log(`✅ Colección '${this.collectionName}' ya existe`);
-        return true;
-      }
-    } catch (error) {
-      if (error.response && error.response.status === 404) {
-        // La colección no existe, crearla
-        // console.log(`📦 Creando colección '${this.collectionName}'...`);
+  // Función auxiliar para delays
+  async sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // Función de reintento con backoff exponencial
+  async retryWithBackoff(fn, maxRetries = 3, baseDelay = 2000) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        if (attempt === maxRetries) {
+          throw error;
+        }
         
-        const collectionConfig = {
-          vectors: {
-            size: this.vectorDimension,
-            distance: "Cosine"
-          },
-          optimizers_config: {
-            default_segment_number: 4,
-            indexing_threshold: 20000,
-            memmap_threshold: 50000
-          },
-          quantization_config: {
-            scalar: {
-              type: "int8",
-              quantile: 0.99,
-              always_ram: true
-            }
-          }
-        };
-
-        await axios.put(
-          `${this.qdrantUrl}/collections/${this.collectionName}`,
-          collectionConfig,
-          { headers: { 'Content-Type': 'application/json' } }
-        );
-
-        // console.log(`✅ Colección '${this.collectionName}' creada exitosamente`);
-        return true;
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        console.log(`⚠️ Intento ${attempt} falló, reintentando en ${delay}ms...`);
+        await this.sleep(delay);
       }
-      
-      throw error;
     }
   }
 
-  // Obtener embeddings del servicio
+  // Verificar/crear colección en Qdrant con reintentos
+  async ensureCollection() {
+    return await this.retryWithBackoff(async () => {
+      try {
+        // Verificar si la colección existe
+        const response = await this.httpClient.get(`${this.qdrantUrl}/collections/${this.collectionName}`);
+        
+        if (response.data.status === 'ok') {
+          return true;
+        }
+      } catch (error) {
+        if (error.response && error.response.status === 404) {
+          // La colección no existe, crearla
+          console.log(`📦 Creando colección '${this.collectionName}'...`);
+          
+          const collectionConfig = {
+            vectors: {
+              size: this.vectorDimension,
+              distance: "Cosine"
+            },
+            optimizers_config: {
+              default_segment_number: 4,
+              indexing_threshold: 20000,
+              memmap_threshold: 50000
+            },
+            quantization_config: {
+              scalar: {
+                type: "int8",
+                quantile: 0.99,
+                always_ram: true
+              }
+            }
+          };
+
+          await this.httpClient.put(
+            `${this.qdrantUrl}/collections/${this.collectionName}`,
+            collectionConfig,
+            { headers: { 'Content-Type': 'application/json' } }
+          );
+
+          console.log(`✅ Colección '${this.collectionName}' creada exitosamente`);
+          await this.sleep(1000); // Pausa después de crear colección
+          return true;
+        }
+        
+        throw error;
+      }
+    }, 5, 3000); // 5 reintentos con delay base de 3 segundos
+  }
+
+  // Obtener embeddings del servicio con reintentos
   async getEmbedding(text) {
-    try {
+    return await this.retryWithBackoff(async () => {
       const response = await this.httpClient.post(
         this.embeddingUrl,
         { inputs: text },
@@ -159,10 +183,9 @@ class IndexarQdrant {
         }
       );
   
-      // CAMBIAR ESTA PARTE
       // Si response.data es directamente el array de números
       if (Array.isArray(response.data) && typeof response.data[0] === 'number') {
-        const embedding = response.data;  // <-- Usar directamente response.data
+        const embedding = response.data;
         
         // Verificar dimensión
         if (embedding.length !== this.vectorDimension) {
@@ -179,15 +202,12 @@ class IndexarQdrant {
         console.error('Formato inesperado:', response.data);
         throw new Error('Formato de respuesta inesperado del servicio de embeddings');
       }
-    } catch (error) {
-      console.error('❌ Error al obtener embedding:', error.message);
-      throw error;
-    }
+    }, 3, 2000);
   }
 
-  // Obtener embeddings en lote OPTIMIZADO
+  // Obtener embeddings en lote con reintentos y delays
   async getEmbeddingsBatch(texts) {
-    try {
+    return await this.retryWithBackoff(async () => {
       const response = await this.httpClient.post(
         this.embeddingUrl,
         { inputs: texts }, // Array de textos
@@ -212,39 +232,43 @@ class IndexarQdrant {
       } else {
         throw new Error('Respuesta no es un array');
       }
-    } catch (error) {
-      // Fallback: procesar uno por uno
-      // console.log('⚠️  Procesamiento en lote falló, procesando individualmente...');
+    }, 3, 2000).catch(async (error) => {
+      // Fallback: procesar uno por uno con delays
+      console.log('⚠️  Procesamiento en lote falló, procesando individualmente...');
       const embeddings = [];
-      for (const text of texts) {
+      for (let i = 0; i < texts.length; i++) {
+        const text = texts[i];
         const embedding = await this.getEmbedding(text);
         embeddings.push(embedding);
+        
+        // Pausa entre embeddings individuales
+        if (i < texts.length - 1) {
+          await this.sleep(100);
+        }
       }
       return embeddings;
-    }
+    });
   }
 
-  // Insertar puntos en Qdrant OPTIMIZADO
+  // Insertar puntos en Qdrant con reintentos
   async upsertToQdrant(points) {
-    try {
+    return await this.retryWithBackoff(async () => {
       const response = await this.httpClient.put(
         `${this.qdrantUrl}/collections/${this.collectionName}/points`,
         { points },
         {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 120000   // Timeout más largo
+          headers: { 'Content-Type': 'application/json' }
         }
       );
 
       if (response.data.status === 'ok') {
+        // Pausa pequeña después de cada upsert exitoso
+        await this.sleep(50);
         return true;
       } else {
         throw new Error(`Error en upsert: ${JSON.stringify(response.data)}`);
       }
-    } catch (error) {
-      console.error('❌ Error al insertar en Qdrant:', error.message);
-      throw error;
-    }
+    }, 3, 3000); // 3 reintentos con delay base de 3 segundos
   }
 
   async indexar() {
@@ -267,40 +291,38 @@ class IndexarQdrant {
       // Generar ID único para el documento
       const docId = this.metadata.idNorm || `doc_${uuidv4()}`;
       
-      // PROCESAMIENTO ULTRA PARALELO CON RTX 3060
-      // console.log(`🚀 Procesamiento ultra paralelo: ${this.embeddingBatchSize} chunks por batch`);
+      // PROCESAMIENTO SECUENCIAL ESTABLE
+      console.log(`🐢 Procesamiento secuencial estable: ${this.embeddingBatchSize} chunks por batch`);
       
-      const allPromises = [];
-      const batchPromises = [];
       let totalProcessed = 0;
       
-      // Crear todos los batches de embeddings en paralelo
+      // Procesar batches secuencialmente para máxima estabilidad
       for (let i = 0; i < chunks.length; i += this.embeddingBatchSize) {
         const batchChunks = chunks.slice(i, i + this.embeddingBatchSize);
         const batchIndex = Math.floor(i / this.embeddingBatchSize);
+        const totalBatches = Math.ceil(chunks.length / this.embeddingBatchSize);
         
-        const batchPromise = this.processBatchOptimized(batchChunks, docId, i, chunks.length, batchIndex);
-        batchPromises.push(batchPromise);
+        console.log(`🔄 Procesando batch ${batchIndex + 1}/${totalBatches} (${batchChunks.length} chunks)`);
         
-        // Limitar concurrencia para no saturar la GPU
-        if (batchPromises.length >= 10) { // Máximo 10 batches paralelos
-          const results = await Promise.allSettled(batchPromises);
-          totalProcessed += this.processBatchResults(results);
-          batchPromises.length = 0; // Limpiar array
+        try {
+          const processedCount = await this.processBatchOptimized(batchChunks, docId, i, chunks.length, batchIndex);
+          totalProcessed += processedCount;
+          
+          // Pausa entre batches para dar respiro
+          if (i + this.embeddingBatchSize < chunks.length) {
+            await this.sleep(1000); // 1 segundo entre batches
+          }
+        } catch (error) {
+          console.error(`❌ Error en batch ${batchIndex + 1}:`, error.message);
+          // Continuar con el siguiente batch
         }
-      }
-      
-      // Procesar batches restantes
-      if (batchPromises.length > 0) {
-        const results = await Promise.allSettled(batchPromises);
-        totalProcessed += this.processBatchResults(results);
       }
       
       // console.log(`✅ Total chunks procesados: ${totalProcessed}/${chunks.length}`);
 
       // Verificar el conteo final
       const collectionInfo = await this.httpClient.get(
-        `${this.qdrantUrl}/collections/${this.collectionName}`, { timeout: 120000   }
+        `${this.qdrantUrl}/collections/${this.collectionName}`
       );
       
       const vectorCount = collectionInfo.data.result.vectors_count;
@@ -373,32 +395,29 @@ class IndexarQdrant {
     }
   }
   
-  // Método para upsert paralelo en batches grandes
+  // Método para upsert secuencial con delays
   async upsertBatchParallel(points) {
-    const upsertPromises = [];
-    
+    // Procesar secuencialmente para máxima estabilidad
     for (let i = 0; i < points.length; i += this.upsertBatchSize) {
       const batch = points.slice(i, i + this.upsertBatchSize);
+      const batchNumber = Math.floor(i / this.upsertBatchSize) + 1;
+      const totalBatches = Math.ceil(points.length / this.upsertBatchSize);
       
-      // Limitar upserts concurrentes
-      if (upsertPromises.length >= this.maxConcurrentUpserts) {
-        await Promise.race(upsertPromises.map((p, idx) => 
-          p.then(() => upsertPromises.splice(idx, 1))
-        ));
+      console.log(`📤 Subiendo batch ${batchNumber}/${totalBatches} a Qdrant (${batch.length} puntos)`);
+      
+      try {
+        await this.upsertToQdrant(batch);
+        console.log(`✅ Batch ${batchNumber} subido exitosamente`);
+        
+        // Pausa entre upserts para no saturar Qdrant
+        if (i + this.upsertBatchSize < points.length) {
+          await this.sleep(500); // 500ms entre batches de upsert
+        }
+      } catch (error) {
+        console.error(`❌ Error en upsert batch ${batchNumber}:`, error.message);
+        throw error; // Re-lanzar el error para que sea manejado por el retry
       }
-      
-      const promise = this.upsertToQdrant(batch)
-        .catch(error => {
-          console.error(`❌ Error en upsert batch:`, error.message);
-          // Reintentar una vez
-          return this.upsertToQdrant(batch);
-        });
-      
-      upsertPromises.push(promise);
     }
-    
-    // Esperar a que terminen todos los upserts
-    await Promise.all(upsertPromises);
   }
   
   // Procesar resultados de batches
@@ -426,7 +445,7 @@ class IndexarQdrant {
     try {
       // Cliente HTTP optimizado para búsqueda
       const httpClient = require('axios').create({
-        timeout: 120000  ,
+        timeout: 30000,
         httpAgent: new (require('http').Agent)({
           keepAlive: true,
           maxSockets: 50
@@ -454,7 +473,7 @@ class IndexarQdrant {
           with_payload: true,
           with_vector: false
         },
-        { headers: { 'Content-Type': 'application/json' }, timeout: 120000   }
+        { headers: { 'Content-Type': 'application/json' } }
       );
 
       return searchResponse.data.result;
