@@ -231,7 +231,8 @@ class IndexarQdrant {
         `${this.qdrantUrl}/collections/${this.collectionName}/points`,
         { points },
         {
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 30000 // Timeout más largo
         }
       );
 
@@ -299,7 +300,7 @@ class IndexarQdrant {
 
       // Verificar el conteo final
       const collectionInfo = await this.httpClient.get(
-        `${this.qdrantUrl}/collections/${this.collectionName}`
+        `${this.qdrantUrl}/collections/${this.collectionName}`, { timeout: 30000 }
       );
       
       const vectorCount = collectionInfo.data.result.vectors_count;
@@ -453,7 +454,7 @@ class IndexarQdrant {
           with_payload: true,
           with_vector: false
         },
-        { headers: { 'Content-Type': 'application/json' } }
+        { headers: { 'Content-Type': 'application/json' }, timeout: 30000 }
       );
 
       return searchResponse.data.result;
