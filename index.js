@@ -1,5 +1,5 @@
 const fs = require('fs');
-const CheckLastNorms = require('./functions/norms/CheckLastNorms');
+const CheckLastNorms = require('./functions/normas/CheckLastNorms');
 // const nodecron = require('node-cron');
 // const LoadNormasFromDir = require('./functions/norms/LoadNormasFromDir');
 
