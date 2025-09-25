@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const IndexarQdrant = require('./functions/pjud/IndexarQdrant');
-const CacheManager = require('./functions/pjud/CacheManager');
+const IndexarQdrant = require('./functions/IndexarQdrant');
+const CacheManager = require('./functions/CacheManager');
 
 const axios = require('axios');
 const http = require('http');
@@ -9,7 +9,7 @@ const https = require('https');
 
 require('dotenv').config();
 const BASE_NAME = process.env.BASE_NAME;
-const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION || 'test';
+const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION || 'jurisprudencia';
 const SENTENCIAS_DIR = process.env.SENTENCIAS_DIR;
 const VECTORIZED_DIR = process.env.VECTORIZED_DIR;
 
@@ -63,125 +63,11 @@ function createMetadataByType(jsonData, tipoBase) {
   };
 
   switch (tipoBase.toLowerCase()) {
-    case 'civil':
+    case 'contraloria':
+      const { documento_completo, ...resto } = jsonData._source;
       return {
-        ...baseMetadata,
-        rol: jsonData.rol_era_sup_s || '',
-        caratulado: jsonData.caratulado_s || '',
-        fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
-        tribunal: jsonData.gls_juz_s || '',
-        juez: jsonData.gls_juez_ss || '',
-        materia: jsonData.gls_materia_s || '',
-      };
-
-    case 'penal':
-      return {
-        ...baseMetadata,
-        rol: jsonData.rol_era_sup_s || '',
-        caratulado: jsonData.caratulado_s || '',
-        fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
-        tribunal: jsonData.gls_juz_s || '',
-        materia: jsonData.gls_materia_ss || [],
-        juez: jsonData.gls_juez_ss || [],
-        resultado: jsonData.sent__GLS_DECISION_s || '',
-      };
-
-    case 'familia':
-      return {
-        ...baseMetadata,
-        rol: jsonData.rol_era_sup_s || '',
-        caratulado: jsonData.caratulado_s || '',
-        fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
-        tribunal: jsonData.gls_juz_s || '',
-        materia: jsonData.cod_materia_s || [],
-        juez: jsonData.gls_juez_ss || [],
-      };
-
-    case 'salud_corte_de_apelaciones':
-      return {
-        ...baseMetadata,
-        rol: jsonData.rol_era_ape_s || '',
-        caratulado: jsonData.caratulado_s || '',
-        corte: jsonData.gls_corte_s || '',
-        fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
-        sala: jsonData.gls_sala_sup_s || '',
-        resultado: jsonData.resultado_recurso_sup_s || '',
-        tematicaDeSalud: jsonData.tematica_ss || [],
-        era: jsonData.era_sup_i || 0,
-        isapre: jsonData.isapre_ss || [],
-      };
-
-    case 'salud_corte_suprema':
-      return {
-        ...baseMetadata,
-        rol: jsonData.rol_era_sup_s || '',
-        caratulado: jsonData.caratulado_s || '',
-        fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
-        institucionesRecurridas: jsonData.organismo_ss || [],
-        tematicaDeSalud: jsonData.tematica_ss || [],
-        medicamento: jsonData.medicamento_ss || [],
-        enfermedad: jsonData.enfermedad_ss || [],
-        corte: jsonData.gls_corte_s || '',
-        resultado: jsonData.resultado_recurso_sup_s || '',
-        sala: jsonData.gls_sala_sup_s || '',
-        era: jsonData.era_sup_i || 0,
-        tipoRecurso: jsonData.gls_tip_recurso_sup_s || ''
-      };
-
-    case 'cobranza':
-      return {
-        ...baseMetadata,
-        rol: jsonData.rol_era_sup_s || '',
-        caratulado: jsonData.caratulado_s || '',
-        fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
-        tribunal: jsonData.gls_juz_s || '',
-        juez: jsonData.gls_juez_ss || '',
-      };
-
-    case 'corte_suprema':
-      return {
-        ...baseMetadata,
-        rol: jsonData.rol_era_sup_s || '',
-        caratulado: jsonData.caratulado_s || '',
-        fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
-        sala: jsonData.gls_sala_sup_s || '',
-        corte: jsonData.gls_corte_s || '',
-        era: jsonData.era_sup_i || 0,
-        categorizacion: jsonData.sent__categorizacion_s || '',
-        resultado: jsonData.resultado_recurso_sup_s || '',
-        redactor: jsonData.gls_relator_s || '',
-        ministro: jsonData.gls_ministro_ss || [],
-        tipoRecurso: jsonData.gls_tip_recurso_sup_s || '',
-        descriptores: jsonData.gls_descriptor_ss || [],
-        idNorm: jsonData.id_norma_ss || [],
-        articulo: jsonData.norma_articulo_ss || [],
-      };
-
-    case 'laboral':
-      return {
-        ...baseMetadata,
-        rol: jsonData.rol_era_sup_s || '',
-        caratulado: jsonData.caratulado_s || '',
-        fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
-        era: jsonData.era_sup_i || 0,
-        categorizacion: jsonData.gls_materia_s || [],
-        tribunal: jsonData.gls_juz_s || '',
-        juez: jsonData.gls_juez_ss || '',
-      };
-
-    case 'corte_de_apelaciones':
-      return {
-        ...baseMetadata,
-        rol: jsonData.rol_era_ape_s || '',
-        caratulado: jsonData.caratulado_s || '',
-        fechaSentencia: jsonData.fec_sentencia_sup_dt || '',
-        era: jsonData.era_sup_i || 0,
-        categorizacion: jsonData.gls_materia_s || '',
-        sala: jsonData.gls_sala_sup_s || '',
-        corte: jsonData.gls_corte_s || '',
-        resultado: jsonData.resultado_recurso_sup_s || '',
-        tipoRecurso: jsonData.tip_recurso_s || '',
-        juzgado: jsonData.gls_juz_s || '',
+        idSentence: jsonData._source.doc_id,
+        ...resto
       };
 
     default:
@@ -363,7 +249,7 @@ async function processWorker(queue, cacheManager, results, BASE_NAME) {
       const jsonData = JSON.parse(contenido);
 
       // Verificar texto
-      if (!jsonData.texto_sentencia || jsonData.texto_sentencia.trim() === '') {
+      if (!jsonData._source.documento_completo || jsonData._source.documento_completo.trim() === '') {
         continue;
       }
 
@@ -381,7 +267,7 @@ async function processWorker(queue, cacheManager, results, BASE_NAME) {
       const embeddingStartTime = Date.now();
       
       const indexResult = await IndexarQdrant.create(
-        jsonData.texto_sentencia, 
+        jsonData._source.documento_completo, 
         QDRANT_COLLECTION, 
         metadata,
         {
