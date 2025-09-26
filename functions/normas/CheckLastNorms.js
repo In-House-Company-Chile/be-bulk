@@ -14,7 +14,7 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 class CheckLastNorms {
     constructor(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, namespace) {
-        this.ID_NORM = 1211458;
+        this.ID_NORM = 1215894;
         this.HORARIO_BLOQUEADO = HORARIO_BLOQUEADO;
         this.PAUSA_CADA_PETICIONES = PAUSA_CADA_PETICIONES;
         this.PAUSA_MINUTOS = PAUSA_MINUTOS;
