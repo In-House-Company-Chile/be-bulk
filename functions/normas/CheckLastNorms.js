@@ -65,7 +65,7 @@ class CheckLastNorms {
                         // fs.writeFileSync(`norms/${this.ID_NORM}.json`, JSON.stringify(jsonData, null, 2));
                         LoadNormasFromJSON.create(jsonData, 'facets')
                         
-                        await IndexarQdrantV2.create(jsonData, jsonData.planeText, this.namespace, {});
+                        await IndexarQdrantV2.create(jsonData, jsonData.planeText, 'normas', {});
                         // Guardar el último ID procesado
                         UpdateLastProcess.create(this.ID_NORM, this.LOG_DIR);
 
