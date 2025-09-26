@@ -62,7 +62,7 @@ class CheckLastNorms {
                         const jsonData = { idNorm: this.ID_NORM, texto: htmlUnificado, planeText: planeText, data, metadatos: JSON.stringify(data.metadatos) };
 
                         await IndexarPsql.create(jsonData, 'normas');
-                        fs.writeFileSync(`norms/${this.ID_NORM}.json`, JSON.stringify(jsonData, null, 2));
+                        // fs.writeFileSync(`norms/${this.ID_NORM}.json`, JSON.stringify(jsonData, null, 2));
                         LoadNormasFromJSON.create(jsonData, 'facets')
                         
                         await IndexarQdrantV2.create(jsonData, jsonData.planeText, this.namespace, {});
