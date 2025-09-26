@@ -22,8 +22,8 @@ class CheckLastNorms {
         this.namespace = namespace;
     }
 
-    static async create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, MAX_ID, LOG_DIR, namespace) {
-        return await new CheckLastNorms(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, MAX_ID, LOG_DIR, namespace).check()
+    static async create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, namespace) {
+        return await new CheckLastNorms(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, namespace).check()
     }
 
     async check() {

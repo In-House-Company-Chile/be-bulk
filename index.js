@@ -1,14 +1,11 @@
 const fs = require('fs');
 const CheckLastNorms = require('./functions/normas/CheckLastNorms');
-// const nodecron = require('node-cron');
-// const LoadNormasFromDir = require('./functions/norms/LoadNormasFromDir');
+const nodecron = require('node-cron');
 
 const HORARIO_BLOQUEADO = { inicio: 0, fin: 6 };
 const PAUSA_CADA_PETICIONES = 100;
 const PAUSA_MINUTOS = 5;
 const LOG_DIR = 'logs';
-const dbName = 'buscadorDB';
-const dbCollection = 'normas';
 const namespace = 'test';
 
 
@@ -19,5 +16,5 @@ if (!fs.existsSync('facets')) fs.mkdirSync('facets', { recursive: true });
 
 nodecron.schedule('0 11 * * *', async () => {
     console.log('🕗 Iniciando verificación de normas a las 11:00');
-    CheckLastNorms.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, dbName, dbCollection, namespace)
+    CheckLastNorms.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, namespace)
 });
