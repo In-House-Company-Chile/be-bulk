@@ -64,8 +64,24 @@ class CheckLastNorms {
                         await IndexarPsql.create(jsonData, 'normas');
                         // fs.writeFileSync(`norms/${this.ID_NORM}.json`, JSON.stringify(jsonData, null, 2));
                         LoadNormasFromJSON.create(jsonData, 'facets')
+
+                        const meta = jsonData.data?.metadatos || {};
+                        const tiposNumeros = meta.tipos_numeros?.[0] || {};
+
+                        const metadata = {
+                            idNorm: jsonData.idNorm,
+                            compuesto: tiposNumeros.compuesto || '',
+                            titulo_norma: meta.titulo_norma || '',
+                            organismos: meta.organismos || [],
+                            fecha_publicacion: meta.fecha_publicacion || '',
+                            fecha_promulgacion: meta.fecha_promulgacion || '',
+                            tipo_version_s: meta.tipo_version_s || '',
+                            inicio_vigencia: meta.vigencia?.inicio_vigencia || '',
+                            fin_vigencia: meta.vigencia?.fin_vigencia || '',
+                            tag: 'norma'
+                          }
                         
-                        await IndexarQdrantV2.create(jsonData, jsonData.planeText, 'normas', {});
+                        await IndexarQdrantV2.create(jsonData, jsonData.planeText, 'normas', metadata);
                         // Guardar el último ID procesado
                         UpdateLastProcess.create(this.ID_NORM, this.LOG_DIR);
 
