@@ -3,8 +3,8 @@ const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 const { RecursiveCharacterTextSplitter } = require('@langchain/textsplitters');
 
-const embeddingUrl = 'http://ms-vector.governare.ai/embed';
-const qdrantUrl = 'http://ms-qdrant-8f82e7cd-8cc2.governare.ai';
+const embeddingUrl = process.env.EMBEDDING_URL;
+const qdrantUrl = process.env.QDRANT_URL;
 
 
 

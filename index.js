@@ -17,12 +17,7 @@ if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
 if (!fs.existsSync('norms')) fs.mkdirSync('norms', { recursive: true });
 if (!fs.existsSync('facets')) fs.mkdirSync('facets', { recursive: true });
 
-// LoadNormasFromDir.create('C:/Users/ljutr/Desktop/Norms/vectorized')
-
-CheckLastNorms.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, dbName, dbCollection, namespace)
-
-// CheckLastNorms.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, dbName, dbCollection, namespace)
-// nodecron.schedule('0 11 * * *', async () => {
-//     console.log('🕗 Iniciando verificación de normas a las 11:00');
-//     CheckLastNorms.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, dbName, dbCollection, namespace)
-// });
+nodecron.schedule('0 11 * * *', async () => {
+    console.log('🕗 Iniciando verificación de normas a las 11:00');
+    CheckLastNorms.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, dbName, dbCollection, namespace)
+});

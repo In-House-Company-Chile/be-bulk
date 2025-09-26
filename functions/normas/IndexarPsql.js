@@ -2,11 +2,11 @@ require('dotenv').config();
 const { Pool } = require('pg');
 
 const pool = new Pool({
-	host: 'localhost',
-	port: 5432,
-	database: 'postgres', // o el nombre de tu base de datos
-	user: 'postgres',
-	password: 'mipassword',
+	host: process.env.POSTGRES_HOST,
+	port: process.env.POSTGRES_PORT,
+	database: process.env.POSTGRES_DATABASE, // o el nombre de tu base de datos
+	user: process.env.POSTGRES_USER,
+	password: process.env.POSTGRES_PASSWORD,
 	max: 10, // máximo de conexiones en el pool
 	idleTimeoutMillis: 30000,
 	connectionTimeoutMillis: 2000,
