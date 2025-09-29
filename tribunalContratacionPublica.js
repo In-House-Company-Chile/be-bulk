@@ -8,7 +8,7 @@ const path = require('path');
 function extraerSentenciasTribunal() {
     try {
         // Leer el archivo JSON
-        const jsonData = fs.readFileSync('tribunalContratacionPublicaFileUnificado.json', 'utf8');
+        const jsonData = fs.readFileSync('patentes_con_ids.json', 'utf8');
         const data = JSON.parse(jsonData);
         
         // Verificar que existe la propiedad results
@@ -28,10 +28,7 @@ function extraerSentenciasTribunal() {
         // Procesar cada objeto en results
         data.results.forEach((item, index) => {
             try {
-                // Verificar que existe sentenciaTribunal y tiene id
-                if (item.sentenciaTribunal && item.sentenciaTribunal.id) {
-                    const sentenciaId = item.sentenciaTribunal.id;
-                    const fileName = `${sentenciaId}.json`;
+                    const fileName = `${item.rol}.json`;
                     const filePath = path.join(outputDir, fileName);
                     
                     // Escribir el objeto completo al archivo
@@ -39,10 +36,6 @@ function extraerSentenciasTribunal() {
                     archivosCreados++;
                     
                     console.log(`✓ Archivo creado: ${fileName}`);
-                } else {
-                    console.warn(`⚠ Objeto en índice ${index} no tiene sentenciaTribunal.id válido`);
-                    errores++;
-                }
             } catch (error) {
                 console.error(`✗ Error procesando objeto en índice ${index}:`, error.message);
                 errores++;
