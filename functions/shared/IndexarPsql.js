@@ -13,13 +13,15 @@ const pool = new Pool({
 });
 
 class IndexarPsql {
-	constructor(doc, tableName) { 
+	constructor(doc, tableName, metadata, idDoc) { 
 		this.doc = doc;
 		this.tableName = tableName || 'normas';
+		this.metadata = metadata;
+		this.idDoc = idDoc;
 	}
 
-	static async create(doc, tableName) {
-		return await new IndexarPsql(doc, tableName).indexar();
+	static async create(doc, tableName, metadata, idDoc) {
+		return await new IndexarPsql(doc, tableName, metadata, idDoc).indexar();
 	}
 
 	async indexar() {
@@ -27,10 +29,10 @@ class IndexarPsql {
 		try {
 			// Verificar si el documento ya existe
 			const existeQuery = 'SELECT COUNT(*) FROM documents WHERE id = $1';
-			const existeResult = await client.query(existeQuery, [this.doc.idNorm]);
+			const existeResult = await client.query(existeQuery, [this.idDoc]);
 			
 			if (parseInt(existeResult.rows[0].count) > 0) {
-				console.log(`⚠️ La norma con ID ${this.doc.idNorm} ya existe en la tabla.`);
+				console.log(`⚠️ La norma con ID ${this.idDoc} ya existe en la tabla.`);
 				return 'OK';
 			}
 
@@ -49,37 +51,19 @@ class IndexarPsql {
 
 			// Calcular el tamaño aproximado del contenido
 			const contentSize = JSON.stringify(this.doc).length;
-			
-			// Preparar metadata similar al formato original
-			const meta = this.doc.data?.metadatos || {};
-			const tiposNumeros = meta.tipos_numeros?.[0] || {};
-			
-			const metadata = {
-				titulo_norma: meta.titulo_norma || '',
-				organismos: meta.organismos || [],
-				fecha_publicacion: meta.fecha_publicacion || '',
-				fecha_promulgacion: meta.fecha_promulgacion || '',
-				tipo_version_s: meta.tipo_version_s || '',
-				inicio_vigencia: meta.vigencia?.inicio_vigencia || '',
-				fin_vigencia: meta.vigencia?.fin_vigencia || '',
-				compuesto: tiposNumeros.compuesto || '',
-				planeText: this.doc.planeText || ''
-			};
 
 			const values = [
-				String(this.doc.idNorm),                    // id
+				String(this.idDoc),                    // id
 				this.tableName || 'normas',        // collection 
-				`${this.doc.idNorm}.json`,         // filename
-				`/path/to/${this.doc.idNorm}.json`, // file_path
+				`${this.idDoc}.json`,         // filename
+				`/path/to/${this.idDoc}.json`, // file_path
 				JSON.stringify(this.doc),          // content (documento completo)
-				JSON.stringify(metadata),          // metadata (campos estructurados)
+				JSON.stringify(this.metadata),          // metadata (campos estructurados)
 				contentSize                        // file_size
 			];
 
 			await client.query(insertQuery, values);
-			const resData = await client.query('SELECT content FROM documents WHERE id = $1', [this.doc.idNorm]);
-			console.log("🚀 ~ IndexarPsql ~ indexar ~ resData:", resData.rows[0].content)
-			console.log(`✅ Indexado en PostgreSQL: ${this.doc.idNorm}`);
+			console.log(`✅ Indexado en PostgreSQL: ${this.idDoc}`);
 			return 'OK';
 		}
 		catch (e) {

@@ -2,8 +2,8 @@ const ExtractText = require('./ExtractText');
 const LogsError = require('./LogsError');
 const MergeHtml = require('./MergeHtml');
 const UpdateLastProcess = require('./UpdateLastProcess');
-const IndexarPsql = require('./IndexarPsql');
-const IndexarQdrantV2 = require('./IndexarQdrantV2');
+const IndexarPsql = require('../shared/IndexarPsql');
+const IndexarQdrantV2 = require('../shared/IndexarQdrantV2');
 const LoadNormasFromJSON = require('./LoadNormasFromJSON');
 
 const fs = require('fs');
@@ -61,10 +61,7 @@ class CheckLastNorms {
                         // Guardar JSON con HTML estructurado
                         const jsonData = { idNorm: this.ID_NORM, texto: htmlUnificado, planeText: planeText, data, metadatos: JSON.stringify(data.metadatos) };
 
-                        await IndexarPsql.create(jsonData, 'normas');
-                        // fs.writeFileSync(`norms/${this.ID_NORM}.json`, JSON.stringify(jsonData, null, 2));
-                        LoadNormasFromJSON.create(jsonData, 'facets')
-
+                        
                         const meta = jsonData.data?.metadatos || {};
                         const tiposNumeros = meta.tipos_numeros?.[0] || {};
 
@@ -79,8 +76,10 @@ class CheckLastNorms {
                             inicio_vigencia: meta.vigencia?.inicio_vigencia || '',
                             fin_vigencia: meta.vigencia?.fin_vigencia || '',
                             tag: 'norma'
-                          }
-                        
+                        }
+                        await IndexarPsql.create(jsonData, 'normas', metadata, metadata.idNorm);
+                        // fs.writeFileSync(`norms/${this.ID_NORM}.json`, JSON.stringify(jsonData, null, 2));
+                        LoadNormasFromJSON.create(jsonData, 'facets')
                         await IndexarQdrantV2.create(jsonData, jsonData.planeText, 'normas', metadata);
                         // Guardar el último ID procesado
                         UpdateLastProcess.create(this.ID_NORM, this.LOG_DIR);
