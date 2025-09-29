@@ -54,7 +54,7 @@ class IndexarPsql {
 
 			const values = [
 				String(this.idDoc),                    // id
-				this.tableName || 'normas',        // collection 
+				this.tableName || 'test',        // collection 
 				`${this.idDoc}.json`,         // filename
 				`/path/to/${this.idDoc}.json`, // file_path
 				JSON.stringify(this.doc),          // content (documento completo)
