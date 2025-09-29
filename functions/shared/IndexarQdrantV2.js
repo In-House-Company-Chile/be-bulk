@@ -64,17 +64,13 @@ class IndexarQdrantV2 {
   }
 
   async upsertToQdrant(points) {
-    try {
-      await axios.put(
-        `${qdrantUrl}/collections/${this.namespace}/points`,
-        { points },
-        {
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-    } catch (error) {
-      console.error(`❌ Error en upsertToQdrant: ${error}`);
-    }
+    await axios.put(
+      `${qdrantUrl}/collections/${this.namespace}/points`,
+      { points },
+      {
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
   }
 }
 
