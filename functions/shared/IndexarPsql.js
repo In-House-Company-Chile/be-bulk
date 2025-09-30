@@ -33,7 +33,7 @@ class IndexarPsql {
 			
 			if (parseInt(existeResult.rows[0].count) > 0) {
 				console.log(`⚠️ La norma con ID ${this.idDoc} ya existe en la tabla.`);
-				return 'OK';
+				return 'INSERTED';
 			}
 
 			// Preparar los datos para insertar (similar al patrón Python)
