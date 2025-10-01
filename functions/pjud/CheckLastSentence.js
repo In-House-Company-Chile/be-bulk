@@ -62,7 +62,7 @@ class CheckLastSentence {
 
             let requestCount = 0;
             let errorCount = 0;
-            const MAX_ERRORES_CONSECUTIVOS = 3;
+            const MAX_ERRORES_CONSECUTIVOS = 10;
             const idBuscador = basesDic[BASE_NAME];
             const referer = refererDic[BASE_NAME];
             const headers = {
