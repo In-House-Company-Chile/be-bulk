@@ -4,34 +4,67 @@ const IndexarQdrantV2 = require('../shared/IndexarQdrantV2');
 const GetCookies = require('./GetCookies');
 const MultipartPayload = require('./MultipartPayload');
 const MetadataByType = require('./MetadataByType');
-const { basesDic, refererDic } = require('./constants');
+const { basesDic, refererDic, baseArray } = require('./constants');
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 class CheckLastSentence {
-    constructor(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, namespace, BASE_NAME) {
+    constructor(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS) {
         this.HORARIO_BLOQUEADO = HORARIO_BLOQUEADO;
         this.PAUSA_CADA_PETICIONES = PAUSA_CADA_PETICIONES;
         this.PAUSA_MINUTOS = PAUSA_MINUTOS;
-        this.namespace = namespace;
-        this.BASE_NAME = BASE_NAME;
-        this.elementPerPage = 2;
-        this.page = 9;
+        this.baseArray = baseArray;
+        this.currentBaseIndex = 0;
+        this.elementPerPage = 50;
     }
 
-    static async create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, namespace, BASE_NAME) {
-        return await new CheckLastSentence(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, namespace, BASE_NAME).check()
+    static async create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS) {
+        return await new CheckLastSentence(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS).processAllBases()
     }
 
-    async check() {
+    async processAllBases() {
+        console.log(`🚀 Iniciando procesamiento de ${this.baseArray.length} bases de datos...`);
+        
+        for (let i = 0; i < this.baseArray.length; i++) {
+            this.currentBaseIndex = i;
+            const BASE_NAME = this.baseArray[i];
+            
+            console.log(`\n${'='.repeat(60)}`);
+            console.log(`📊 Procesando base ${i + 1}/${this.baseArray.length}: ${BASE_NAME}`);
+            console.log(`${'='.repeat(60)}\n`);
+            
+            try {
+                await this.check(BASE_NAME);
+                console.log(`\n✅ Base ${BASE_NAME} completada exitosamente\n`);
+            } catch (error) {
+                console.error(`\n❌ Error en base ${BASE_NAME}:`, error.message);
+                console.log(`Continuando con la siguiente base...\n`);
+            }
+            
+            // Pausa entre bases para evitar saturar el servidor
+            if (i < this.baseArray.length - 1) {
+                const pausaEntreBases = 5000; // 5 segundos
+                console.log(`⏳ Esperando ${pausaEntreBases / 1000} segundos antes de la siguiente base...`);
+                await sleep(pausaEntreBases);
+            }
+        }
+        
+        console.log(`\n${'='.repeat(60)}`);
+        console.log(`🎉 Procesamiento completo de todas las bases finalizado`);
+        console.log(`${'='.repeat(60)}\n`);
+    }
+
+    async check(BASE_NAME) {
         try {
-            console.log("🚀 ~ CheckLastSentence ~ check ~ this.page:", this.page)
+            // Reiniciar la página para cada nueva base
+            let page = 0;
+            console.log(`🚀 Iniciando scraping de base: ${BASE_NAME} desde página ${page}`);
 
             let requestCount = 0;
             let errorCount = 0;
             const MAX_ERRORES_CONSECUTIVOS = 3;
-            const idBuscador = basesDic[this.BASE_NAME];
-            const referer = refererDic[this.BASE_NAME];
+            const idBuscador = basesDic[BASE_NAME];
+            const referer = refererDic[BASE_NAME];
             const headers = {
                 'Accept': 'text/html, */*; q=0.01',
                 'Accept-Language': 'es-ES,es;q=0.9,en-US;q=0.8,en;q=0.7',
@@ -52,7 +85,7 @@ class CheckLastSentence {
             
             while (errorCount < MAX_ERRORES_CONSECUTIVOS) {
                 const currentHour = new Date().getHours();
-                const payload = await MultipartPayload.create(token, idBuscador, this.elementPerPage, this.page);
+                const payload = await MultipartPayload.create(token, idBuscador, this.elementPerPage, page);
 
                 // Si estamos en horario bloqueado, esperar hasta que termine
                 if (currentHour >= this.HORARIO_BLOQUEADO.inicio && currentHour < this.HORARIO_BLOQUEADO.fin) {
@@ -82,24 +115,28 @@ class CheckLastSentence {
                     if (response.data) {
                         const data = response.data.response.docs;
 
-                        data.forEach(async (doc) => {
+                        // Procesar documentos secuencialmente para evitar condiciones de carrera
+                        for (const doc of data) {
                             const idSentence = doc.id;
-                            const metadata = MetadataByType.create(doc, this.BASE_NAME);
-                            const indexarPsql = await IndexarPsql.create(doc, this.BASE_NAME, metadata, idSentence);
-                            if (indexarPsql === 'OK' && errorCount < MAX_ERRORES_CONSECUTIVOS) {
-                                await IndexarQdrantV2.create(doc, doc.texto_sentencia, this.BASE_NAME, metadata);
+                            const metadata = MetadataByType.create(doc, BASE_NAME);
+                            const indexarPsql = await IndexarPsql.create(doc, BASE_NAME, metadata, idSentence);
+                            if (indexarPsql === 'OK') {
+                                await IndexarQdrantV2.create(doc, doc.texto_sentencia, BASE_NAME, metadata);
                                 errorCount = 0;
                             } else {
                                 errorCount++;
                             }
                             requestCount++;
-                        });
+                        }
                     } else {
                         errorCount++;
                     }
                 } catch (e) {
-                    // console.log("🚀 ~ CheckLastSentence ~ check ~ e:", e)
-                    console.log("🚀 ~ CheckLastSentence ~ check ~ e:", e.status)
+                    console.error(`❌ Error en petición HTTP:`, {
+                        status: e.response?.status,
+                        statusText: e.response?.statusText,
+                        message: e.message
+                    });
                     errorCount++;
                 }
 
@@ -115,11 +152,14 @@ class CheckLastSentence {
                     requestCount = 0;
                 }
                 
-                this.page = this.page + this.elementPerPage;
+                page = page + this.elementPerPage;
             }
             if (errorCount >= MAX_ERRORES_CONSECUTIVOS) {
-                console.log(`🚨 Se han alcanzado ${errorCount} errores consecutivos. Finalizando base ${this.BASE_NAME}.`);
+                console.log(`🚨 Se han alcanzado ${errorCount} errores consecutivos. Finalizando base ${BASE_NAME}.`);
             }
+            
+            console.log(`📊 Base ${BASE_NAME} procesada. Total de páginas: ${page}`);
+            return { BASE_NAME, totalPages: page, completed: true };
         } catch (e) {
             console.error("🚨 Error general en CheckLastSentence():", e.message);
             throw new Error("Error al ejecutar la función CheckLastSentence()");

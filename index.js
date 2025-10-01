@@ -1,5 +1,5 @@
 const fs = require('fs');
-// const CheckLastNorms = require('./functions/normas/CheckLastNorms');
+const CheckLastNorms = require('./functions/normas/CheckLastNorms');
 const CheckLastSentence = require('./functions/pjud/CheckLastSentence');
 const nodecron = require('node-cron');
 
@@ -15,9 +15,13 @@ if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
 if (!fs.existsSync('norms')) fs.mkdirSync('norms', { recursive: true });
 if (!fs.existsSync('facets')) fs.mkdirSync('facets', { recursive: true });
 
-CheckLastSentence.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, namespace, 'corte_suprema')
-// CheckLastNorms.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, namespace)
-// nodecron.schedule('0 11 * * *', async () => {
-//     console.log('🕗 Iniciando verificación de normas a las 11:00');
-//     CheckLastNorms.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, namespace)
-// });
+
+nodecron.schedule('0 11 * * *', async () => {
+    console.log('🕗 Iniciando verificación de normas a las 11:00');
+    CheckLastNorms.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, namespace)
+});
+
+nodecron.schedule('0 23 * * 5', async () => {
+    console.log('🕗 Iniciando verificación de sentencias a las 23:00');
+    CheckLastSentence.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS)
+});

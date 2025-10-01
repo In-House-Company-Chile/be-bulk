@@ -1,4 +1,6 @@
-export const basesDic = {
+const baseArray = ["corte_suprema", "corte_de_apelaciones", "familia", "penal", "cobranza", "laboral", "civil", "salud_corte_suprema", "salud_corte_de_apelaciones"]
+
+const basesDic = {
     "corte_suprema": "528",
     "corte_de_apelaciones": "168",
     "familia": "270",
@@ -10,7 +12,7 @@ export const basesDic = {
     "salud_corte_de_apelaciones": "388",
 }
 
-export const refererDic = {
+const refererDic = {
     "corte_suprema": "https://juris.pjud.cl/busqueda?Buscador_Jurisprudencial_de_la_Corte_Suprema",
     "corte_de_apelaciones": "https://juris.pjud.cl/busqueda?Corte_de_Apelaciones",
     "familia": "https://juris.pjud.cl/busqueda?Sentencias_de_Familia",
@@ -21,3 +23,5 @@ export const refererDic = {
     "salud_corte_suprema": "https://juris.pjud.cl/busqueda?Compendio_de_Salud_de_Corte_Suprema",
     "salud_corte_de_apelaciones": "https://juris.pjud.cl/busqueda?Compendio_de_Salud_Corte_de_Apelaciones",
 }
+
+module.exports = { baseArray, basesDic, refererDic };
