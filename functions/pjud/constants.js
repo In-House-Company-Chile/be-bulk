@@ -1,8 +1,6 @@
-const baseArray = ["corte_suprema", "corte_de_apelaciones", "familia", "penal", "cobranza", "laboral", "civil", "salud_corte_suprema", "salud_corte_de_apelaciones"]
+const baseArray = ["familia", "penal", "cobranza", "laboral", "civil", "salud_corte_suprema", "salud_corte_de_apelaciones"]
 
 const basesDic = {
-    "corte_suprema": "528",
-    "corte_de_apelaciones": "168",
     "familia": "270",
     "penal": "268",
     "cobranza": "269",
@@ -13,8 +11,6 @@ const basesDic = {
 }
 
 const refererDic = {
-    "corte_suprema": "https://juris.pjud.cl/busqueda?Buscador_Jurisprudencial_de_la_Corte_Suprema",
-    "corte_de_apelaciones": "https://juris.pjud.cl/busqueda?Corte_de_Apelaciones",
     "familia": "https://juris.pjud.cl/busqueda?Sentencias_de_Familia",
     "penal": "https://juris.pjud.cl/busqueda?Sentencias_Penales",
     "cobranza": "https://juris.pjud.cl/busqueda?Sentencias_Cobranza",
