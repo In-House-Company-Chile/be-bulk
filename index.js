@@ -17,13 +17,15 @@ if (!fs.existsSync('norms')) fs.mkdirSync('norms', { recursive: true });
 if (!fs.existsSync('facets')) fs.mkdirSync('facets', { recursive: true });
 
 
-nodecron.schedule('0 11 * * *', async () => {
-    console.log('🕗 Iniciando verificación de normas a las 11:00');
-    await CheckLastNorms.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, namespace)
-    await CheckPerDayLastSentence.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS)
-});
+(async () => await CheckPerDayLastSentence.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS))()
 
-nodecron.schedule('0 23 * * 5', async () => {
-    console.log('🕗 Iniciando verificación de sentencias a las 23:00');
-    await CheckLastSentence.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS)
-});
+// nodecron.schedule('0 11 * * *', async () => {
+//     console.log('🕗 Iniciando verificación de normas a las 11:00');
+//     await CheckLastNorms.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS, LOG_DIR, namespace)
+//     await CheckPerDayLastSentence.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS)
+// });
+
+// nodecron.schedule('0 23 * * 5', async () => {
+//     console.log('🕗 Iniciando verificación de sentencias a las 23:00');
+//     await CheckLastSentence.create(HORARIO_BLOQUEADO, PAUSA_CADA_PETICIONES, PAUSA_MINUTOS)
+// });

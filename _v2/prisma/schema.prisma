@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model ScraperCursor {
+  id          String   @id @default(cuid())
+  sourceName  String   @unique
+  lastCursor  String
+  updatedAt   DateTime @updatedAt
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  externalId  String
+  sourceName  String
+  title       String
+  body        String   @db.Text
+  metadata    Json
+  publishedAt DateTime?
+  indexedAt   DateTime @default(now())
+
+  @@unique([sourceName, externalId])
+}
