@@ -1,6 +1,6 @@
 const axios = require('axios');
 const { v4: uuidv4, v5: uuidv5 } = require('uuid');
-const config = require('./config');
+const config = require('../config');
 
 // Namespace UUID fijo para generar IDs determinísticos
 const NAMESPACE_UUID = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';

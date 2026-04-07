@@ -1,4 +1,4 @@
-const config = require('./config');
+const config = require('../config');
 
 /**
  * Divide un texto en chunks con overlap para vectorización.
