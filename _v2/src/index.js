@@ -37,8 +37,10 @@ async function main() {
 
   let source;
   try {
-    source = getSource(sourceName);
+    source = getSource(sourceName, args);
   } catch (err) {
+    source = getSource(sourceName, args);
+
     console.error(`❌ ${err.message}`);
     process.exit(1);
   }

@@ -4,18 +4,6 @@ const { getEmbeddingsBatch } = require('./core/embeddings');
 const { upsertDocument, documentExists } = require('./core/postgresStore');
 const { ensureCollection, upsertPoints, generatePointId } = require('./core/qdrantStore');
 
-/**
- * Pipeline genérico: recibe una fuente (source) y sus documentos,
- * y ejecuta extracción → chunking → embedding → storage.
- *
- * NO sabe nada del scraping — eso es responsabilidad de cada source.
- *
- * @param {BaseSource} source - Instancia de la fuente
- * @param {Array} documents - Documentos retornados por source.scrape()
- * @param {object} params - Parámetros originales de la ejecución
- * @param {object} opts
- * @param {boolean} opts.skipExisting - Saltar docs ya existentes en PG
- */
 async function runPipeline(source, documents, params, opts = {}) {
     const { skipExisting = true } = opts;
     const collection = source.collection;
@@ -32,7 +20,6 @@ async function runPipeline(source, documents, params, opts = {}) {
         console.log(`   ${doc.title.slice(0, 80)}`);
         console.log(`${'─'.repeat(50)}`);
 
-        // Verificar si ya existe
         if (skipExisting) {
             const exists = await documentExists(doc.id, collection);
             if (exists) {
@@ -42,7 +29,6 @@ async function runPipeline(source, documents, params, opts = {}) {
             }
         }
 
-        // Obtener texto: del PDF o directo del documento
         let text, pages = 0, fileSize = 0;
 
         if (doc.pdfUrl) {
@@ -69,23 +55,20 @@ async function runPipeline(source, documents, params, opts = {}) {
             continue;
         }
 
-        // Chunking
         console.log('\n✂️  Dividiendo en chunks...');
         const chunks = chunkText(text);
         totalChunks += chunks.length;
 
-        // Embeddings
         console.log('\n🧠 Generando embeddings...');
         const chunkTexts = chunks.map(c => c.text);
         const embeddings = await getEmbeddingsBatch(chunkTexts);
 
-        // Asegurar colección en Qdrant
+        // Asegurar colección con el collection dinámico del source
         if (!qdrantCollectionReady && embeddings.length > 0 && embeddings[0].vector) {
-            await ensureCollection(embeddings[0].vector.length);
+            await ensureCollection(embeddings[0].vector.length, collection);
             qdrantCollectionReady = true;
         }
 
-        // PostgreSQL
         console.log('\n💾 Guardando en PostgreSQL...');
         await upsertDocument({
             id: doc.id,
@@ -106,7 +89,6 @@ async function runPipeline(source, documents, params, opts = {}) {
             fileSize,
         });
 
-        // Qdrant points
         const points = embeddings
             .filter(e => e.vector !== null)
             .map(e => ({
@@ -120,10 +102,10 @@ async function runPipeline(source, documents, params, opts = {}) {
         console.log(`✅ ${doc.id}: ${chunks.length} chunks, ${points.length} vectores`);
     }
 
-    // Batch upsert a Qdrant
+    // Batch upsert con el collection dinámico del source
     if (allQdrantPoints.length > 0) {
         console.log(`\n🔮 Guardando ${allQdrantPoints.length} vectores en Qdrant...`);
-        await upsertPoints(allQdrantPoints);
+        await upsertPoints(allQdrantPoints, collection);
     }
 
     return { processed, skipped, totalChunks, totalVectors: allQdrantPoints.length };
