@@ -264,6 +264,9 @@ async function main() {
         } catch (err) {
             errors++;
             console.error(`❌ ${progress} Error en ${queryDate}|${edition}|${section}: ${err.message}`);
+            // Espera extra tras error de red para evitar rate limiting
+            console.log(`   ⏳ Esperando ${DELAY_ON_ERR / 1000}s antes de continuar...`);
+            await sleep(DELAY_ON_ERR);
         }
 
         await sleep(DELAY_MS);

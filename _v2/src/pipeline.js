@@ -1,8 +1,39 @@
+const fs = require('fs');
+const path = require('path');
 const { extractTextFromPdf } = require('./core/pdfExtractor');
 const { chunkText } = require('./core/chunker');
 const { getEmbeddingsBatch } = require('./core/embeddings');
-const { upsertDocument, documentExists, getDocument } = require('./core/postgresStore');
+const { upsertDocument, documentExists, getDocumentsByEdition } = require('./core/postgresStore');
 const { ensureCollection, upsertPoints, generatePointId } = require('./core/qdrantStore');
+
+// ─── Failed docs log ──────────────────────────────────────────────────────────
+
+const FAILED_LOG_FILE = path.resolve(__dirname, '../data/failed-docs-log.json');
+
+function loadFailedLog() {
+    if (fs.existsSync(FAILED_LOG_FILE)) {
+        return JSON.parse(fs.readFileSync(FAILED_LOG_FILE, 'utf-8'));
+    }
+    return { updated_at: null, failed: [] };
+}
+
+function saveFailedDoc(docId, collection, pdfUrl, edition, section, error) {
+    const log = loadFailedLog();
+    const exists = log.failed.some(f => f.docId === docId && f.collection === collection);
+    if (!exists) {
+        log.failed.push({
+            docId,
+            collection,
+            pdfUrl,
+            edition,
+            section,
+            error,
+            failed_at: new Date().toISOString(),
+        });
+    }
+    log.updated_at = new Date().toISOString();
+    fs.writeFileSync(FAILED_LOG_FILE, JSON.stringify(log, null, 2));
+}
 
 // ─── Pipeline completo ────────────────────────────────────────────────────────
 
@@ -55,7 +86,7 @@ async function runPipeline(source, documents, params, opts = {}) {
                 saveFailedDoc(doc.id, collection, doc.pdfUrl, params.edition, params.section, err.message);
                 consecutiveErrors++;
                 if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-                    throw new Error(`Circuit breaker: ${MAX_CONSECUTIVE_ERRORS} errores consecutivos de PDF. Deteniendo pipeline.`);
+                    throw new Error(`Circuit breaker: ${MAX_CONSECUTIVE_ERRORS} errores consecutivos. Deteniendo pipeline.`);
                 }
                 continue;
             }
@@ -108,7 +139,6 @@ async function runPipeline(source, documents, params, opts = {}) {
             fileSize,
         });
 
-        // ── Notificar que PG está done (para el log del bulk-ingest)
         if (onPgDone) {
             onPgDone({ processed: 1, skipped: 0, totalChunks: chunks.length });
         }
@@ -124,7 +154,7 @@ async function runPipeline(source, documents, params, opts = {}) {
 
         allQdrantPoints.push(...points);
         processed++;
-        consecutiveErrors = 0; // reset al tener un doc exitoso
+        consecutiveErrors = 0;
         console.log(`✅ ${doc.id}: ${chunks.length} chunks, ${points.length} vectores`);
     }
 
@@ -138,18 +168,11 @@ async function runPipeline(source, documents, params, opts = {}) {
 }
 
 // ─── Solo Qdrant (recuperación) ───────────────────────────────────────────────
-// Lee los chunks desde PostgreSQL y los reinserta en Qdrant sin reprocesar PDFs.
 
 async function runQdrantOnly(source, params) {
     const collection = source.collection;
-    const { date, edition, section } = params;
-
-    // Buscar todos los docs de esta combinación fecha+edition+section en PG
-    const db = require('./core/postgresStore').getPool
-        ? require('./core/postgresStore')
-        : require('./core/postgresStore');
-
-    const rows = await db.getDocumentsByEdition(edition, collection);
+    const { edition } = params;
+    const rows = await getDocumentsByEdition(edition, collection);
 
     if (!rows || rows.length === 0) {
         console.log(`⬜ No hay docs en PG para edition=${edition} collection=${collection}`);
@@ -163,7 +186,6 @@ async function runQdrantOnly(source, params) {
         const chunks = row.content?.chunks || [];
         if (chunks.length === 0) continue;
 
-        // Regenerar embeddings desde el texto guardado en PG
         console.log(`\n🧠 Regenerando embeddings para ${row.id} (${chunks.length} chunks)...`);
         const embeddings = await getEmbeddingsBatch(chunks.map(c => c.text));
 
@@ -172,7 +194,6 @@ async function runQdrantOnly(source, params) {
             qdrantCollectionReady = true;
         }
 
-        // Reconstruir doc desde metadata de PG
         const doc = {
             id: row.id,
             title: row.metadata?.title || '',
