@@ -1,11 +1,13 @@
 const { extractTextFromPdf } = require('./core/pdfExtractor');
 const { chunkText } = require('./core/chunker');
 const { getEmbeddingsBatch } = require('./core/embeddings');
-const { upsertDocument, documentExists } = require('./core/postgresStore');
+const { upsertDocument, documentExists, getDocument } = require('./core/postgresStore');
 const { ensureCollection, upsertPoints, generatePointId } = require('./core/qdrantStore');
 
+// ─── Pipeline completo ────────────────────────────────────────────────────────
+
 async function runPipeline(source, documents, params, opts = {}) {
-    const { skipExisting = true } = opts;
+    const { skipExisting = true, onPgDone } = opts;
     const collection = source.collection;
     let qdrantCollectionReady = false;
     let allQdrantPoints = [];
@@ -18,16 +20,15 @@ async function runPipeline(source, documents, params, opts = {}) {
 
         // ── ID compuesto: CVE + edition para evitar colisiones en ediciones dobles
         const cve = doc.id;
-        const compositeId = params.edition ? `${cve}-${params.edition}` : cve;
-        doc.id = compositeId;
-        doc.metadata = { ...doc.metadata, cve }; // preservar CVE original en metadata
+        doc.id = params.edition ? `${cve}-${params.edition}` : cve;
+        doc.metadata = { ...doc.metadata, cve };
 
         console.log(`\n${'─'.repeat(50)}`);
         console.log(`📄 Procesando ${i + 1}/${documents.length}: ${doc.id}`);
         console.log(`   ${doc.title.slice(0, 80)}`);
         console.log(`${'─'.repeat(50)}`);
 
-        // ── Skip si ya existe
+        // ── Skip si ya existe en PG
         if (skipExisting) {
             const exists = await documentExists(doc.id, collection);
             if (exists) {
@@ -71,8 +72,7 @@ async function runPipeline(source, documents, params, opts = {}) {
 
         // ── Embeddings
         console.log('\n🧠 Generando embeddings...');
-        const chunkTexts = chunks.map(c => c.text);
-        const embeddings = await getEmbeddingsBatch(chunkTexts);
+        const embeddings = await getEmbeddingsBatch(chunks.map(c => c.text));
 
         // ── Asegurar colección Qdrant
         if (!qdrantCollectionReady && embeddings.length > 0 && embeddings[0].vector) {
@@ -101,6 +101,11 @@ async function runPipeline(source, documents, params, opts = {}) {
             fileSize,
         });
 
+        // ── Notificar que PG está done (para el log del bulk-ingest)
+        if (onPgDone) {
+            onPgDone({ processed: 1, skipped: 0, totalChunks: chunks.length });
+        }
+
         // ── Qdrant points
         const points = embeddings
             .filter(e => e.vector !== null)
@@ -124,4 +129,67 @@ async function runPipeline(source, documents, params, opts = {}) {
     return { processed, skipped, totalChunks, totalVectors: allQdrantPoints.length };
 }
 
-module.exports = { runPipeline };
+// ─── Solo Qdrant (recuperación) ───────────────────────────────────────────────
+// Lee los chunks desde PostgreSQL y los reinserta en Qdrant sin reprocesar PDFs.
+
+async function runQdrantOnly(source, params) {
+    const collection = source.collection;
+    const { date, edition, section } = params;
+
+    // Buscar todos los docs de esta combinación fecha+edition+section en PG
+    const db = require('./core/postgresStore').getPool
+        ? require('./core/postgresStore')
+        : require('./core/postgresStore');
+
+    const rows = await db.getDocumentsByEdition(edition, collection);
+
+    if (!rows || rows.length === 0) {
+        console.log(`⬜ No hay docs en PG para edition=${edition} collection=${collection}`);
+        return 0;
+    }
+
+    let allPoints = [];
+    let qdrantCollectionReady = false;
+
+    for (const row of rows) {
+        const chunks = row.content?.chunks || [];
+        if (chunks.length === 0) continue;
+
+        // Regenerar embeddings desde el texto guardado en PG
+        console.log(`\n🧠 Regenerando embeddings para ${row.id} (${chunks.length} chunks)...`);
+        const embeddings = await getEmbeddingsBatch(chunks.map(c => c.text));
+
+        if (!qdrantCollectionReady && embeddings.length > 0 && embeddings[0].vector) {
+            await ensureCollection(embeddings[0].vector.length, collection);
+            qdrantCollectionReady = true;
+        }
+
+        // Reconstruir doc desde metadata de PG
+        const doc = {
+            id: row.id,
+            title: row.metadata?.title || '',
+            organism: row.metadata?.organism || '',
+            metadata: row.metadata || {},
+        };
+
+        const points = embeddings
+            .filter(e => e.vector !== null)
+            .map(e => ({
+                id: generatePointId(row.id, e.index),
+                vector: e.vector,
+                payload: source.getQdrantPayload(doc, { text: e.text, index: e.index }, chunks.length, params),
+            }));
+
+        allPoints.push(...points);
+        console.log(`   ${row.id}: ${points.length} vectores listos`);
+    }
+
+    if (allPoints.length > 0) {
+        console.log(`\n🔮 Reinsertando ${allPoints.length} vectores en Qdrant...`);
+        await upsertPoints(allPoints, collection);
+    }
+
+    return allPoints.length;
+}
+
+module.exports = { runPipeline, runQdrantOnly };
