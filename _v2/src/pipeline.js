@@ -14,6 +14,8 @@ async function runPipeline(source, documents, params, opts = {}) {
     let totalChunks = 0;
     let processed = 0;
     let skipped = 0;
+    let consecutiveErrors = 0;
+    const MAX_CONSECUTIVE_ERRORS = 10;
 
     for (let i = 0; i < documents.length; i++) {
         const doc = documents[i];
@@ -51,6 +53,10 @@ async function runPipeline(source, documents, params, opts = {}) {
             } catch (err) {
                 console.error(`❌ Error con PDF: ${err.message}`);
                 saveFailedDoc(doc.id, collection, doc.pdfUrl, params.edition, params.section, err.message);
+                consecutiveErrors++;
+                if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+                    throw new Error(`Circuit breaker: ${MAX_CONSECUTIVE_ERRORS} errores consecutivos de PDF. Deteniendo pipeline.`);
+                }
                 continue;
             }
         } else if (doc.text) {
@@ -118,6 +124,7 @@ async function runPipeline(source, documents, params, opts = {}) {
 
         allQdrantPoints.push(...points);
         processed++;
+        consecutiveErrors = 0; // reset al tener un doc exitoso
         console.log(`✅ ${doc.id}: ${chunks.length} chunks, ${points.length} vectores`);
     }
 
