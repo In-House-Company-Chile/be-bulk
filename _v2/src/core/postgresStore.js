@@ -1,5 +1,4 @@
 const { Pool } = require('pg');
-const { v4: uuidv4 } = require('uuid');
 const config = require('../config');
 
 let pool = null;
@@ -30,19 +29,10 @@ function getPool() {
 async function upsertDocument(doc) {
   const db = getPool();
 
-  // Verificar si ya existe por CVE + collection (no por UUID)
-  const existing = await db.query(
-    `SELECT id FROM public.documents
-         WHERE metadata->>'cve' = $1 AND collection = $2`,
-    [doc.id, doc.collection]
-  );
-
-  const uuid = existing.rows[0]?.id || uuidv4();
-
   const query = `
         INSERT INTO public.documents (id, collection, filename, file_path, content, metadata, file_size, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, NOW(), NOW())
-        ON CONFLICT (id)
+        ON CONFLICT (id, collection)
         DO UPDATE SET
             filename   = EXCLUDED.filename,
             file_path  = EXCLUDED.file_path,
@@ -53,7 +43,7 @@ async function upsertDocument(doc) {
     `;
 
   const values = [
-    uuid,
+    doc.id,
     doc.collection,
     doc.filename,
     doc.filePath,
