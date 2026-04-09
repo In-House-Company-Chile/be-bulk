@@ -21,11 +21,6 @@ function getPool() {
   return pool;
 }
 
-/**
- * Inserta o actualiza un documento en la tabla documents.
- * El ID es un UUID v4 random. La búsqueda de existencia se hace
- * por (cve, collection) via metadata->>'cve'.
- */
 async function upsertDocument(doc) {
   const db = getPool();
 
@@ -42,7 +37,7 @@ async function upsertDocument(doc) {
             updated_at = NOW()
     `;
 
-  const values = [
+  await db.query(query, [
     doc.id,
     doc.collection,
     doc.filename,
@@ -50,45 +45,29 @@ async function upsertDocument(doc) {
     JSON.stringify(doc.content),
     JSON.stringify(doc.metadata),
     doc.fileSize,
-  ];
+  ]);
 
-  await db.query(query, values);
-  console.log(`[PostgreSQL] Upserted document: ${doc.id} → ${uuid} in ${doc.collection}`);
+  console.log(`[PostgreSQL] Upserted document: ${doc.id} in ${doc.collection}`);
 }
 
-/**
- * Verifica si un documento ya existe por CVE + collection.
- */
 async function documentExists(id, collection) {
   const db = getPool();
   const res = await db.query(
-    `SELECT 1 FROM public.documents
-         WHERE metadata->>'cve' = $1 AND collection = $2`,
+    `SELECT 1 FROM public.documents WHERE id = $1 AND collection = $2`,
     [id, collection]
   );
   return res.rowCount > 0;
 }
 
-/**
- * Obtiene un documento por CVE + collection.
- */
 async function getDocument(id, collection) {
   const db = getPool();
   const res = await db.query(
-    `SELECT * FROM public.documents
-         WHERE metadata->>'cve' = $1 AND collection = $2`,
+    `SELECT * FROM public.documents WHERE id = $1 AND collection = $2`,
     [id, collection]
   );
   return res.rows[0] || null;
 }
 
-/**
- * Cierra el pool de conexiones.
- */
-/**
- * Obtiene todos los documentos de una edition + collection.
- * Usado por runQdrantOnly para recuperar chunks desde PG.
- */
 async function getDocumentsByEdition(edition, collection) {
   const db = getPool();
   const res = await db.query(
@@ -107,4 +86,4 @@ async function closePool() {
   }
 }
 
-module.exports = { upsertDocument, documentExists, getDocument, getDocumentsByEdition, closePool };
+module.exports = { getPool, upsertDocument, documentExists, getDocument, getDocumentsByEdition, closePool };
