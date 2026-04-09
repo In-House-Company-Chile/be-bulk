@@ -28,6 +28,7 @@ const { closePool } = require('../core/postgresStore');
 const MAP_FILE = path.resolve(__dirname, '../../data/editions-map.json');
 const LOG_FILE = path.resolve(__dirname, '../../data/bulk-ingest-log.json');
 const DELAY_MS = 1000;
+const DELAY_ON_ERR = 60000; // 60 segundos extra tras error de red
 
 const ALL_SECTIONS = [
     'normas-generales',
