@@ -15,11 +15,19 @@ async function runPipeline(source, documents, params, opts = {}) {
 
     for (let i = 0; i < documents.length; i++) {
         const doc = documents[i];
+
+        // ── ID compuesto: CVE + edition para evitar colisiones en ediciones dobles
+        const cve = doc.id;
+        const compositeId = params.edition ? `${cve}-${params.edition}` : cve;
+        doc.id = compositeId;
+        doc.metadata = { ...doc.metadata, cve }; // preservar CVE original en metadata
+
         console.log(`\n${'─'.repeat(50)}`);
         console.log(`📄 Procesando ${i + 1}/${documents.length}: ${doc.id}`);
         console.log(`   ${doc.title.slice(0, 80)}`);
         console.log(`${'─'.repeat(50)}`);
 
+        // ── Skip si ya existe
         if (skipExisting) {
             const exists = await documentExists(doc.id, collection);
             if (exists) {
@@ -29,6 +37,7 @@ async function runPipeline(source, documents, params, opts = {}) {
             }
         }
 
+        // ── Obtener texto
         let text, pages = 0, fileSize = 0;
 
         if (doc.pdfUrl) {
@@ -55,25 +64,28 @@ async function runPipeline(source, documents, params, opts = {}) {
             continue;
         }
 
+        // ── Chunking
         console.log('\n✂️  Dividiendo en chunks...');
         const chunks = chunkText(text);
         totalChunks += chunks.length;
 
+        // ── Embeddings
         console.log('\n🧠 Generando embeddings...');
         const chunkTexts = chunks.map(c => c.text);
         const embeddings = await getEmbeddingsBatch(chunkTexts);
 
-        // Asegurar colección con el collection dinámico del source
+        // ── Asegurar colección Qdrant
         if (!qdrantCollectionReady && embeddings.length > 0 && embeddings[0].vector) {
             await ensureCollection(embeddings[0].vector.length, collection);
             qdrantCollectionReady = true;
         }
 
+        // ── PostgreSQL
         console.log('\n💾 Guardando en PostgreSQL...');
         await upsertDocument({
             id: doc.id,
             collection,
-            filename: doc.pdfUrl ? `${doc.id}.pdf` : `${doc.id}.txt`,
+            filename: doc.pdfUrl ? `${cve}.pdf` : `${cve}.txt`,
             filePath: doc.pdfUrl || null,
             content: {
                 fullText: text,
@@ -89,6 +101,7 @@ async function runPipeline(source, documents, params, opts = {}) {
             fileSize,
         });
 
+        // ── Qdrant points
         const points = embeddings
             .filter(e => e.vector !== null)
             .map(e => ({
@@ -102,7 +115,7 @@ async function runPipeline(source, documents, params, opts = {}) {
         console.log(`✅ ${doc.id}: ${chunks.length} chunks, ${points.length} vectores`);
     }
 
-    // Batch upsert con el collection dinámico del source
+    // ── Batch upsert Qdrant
     if (allQdrantPoints.length > 0) {
         console.log(`\n🔮 Guardando ${allQdrantPoints.length} vectores en Qdrant...`);
         await upsertPoints(allQdrantPoints, collection);

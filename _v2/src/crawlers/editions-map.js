@@ -18,7 +18,7 @@ const path = require('path');
 // ─── Configuración ────────────────────────────────────────────────────────────
 
 const BASE_URL = 'https://www.diariooficial.interior.gob.cl/edicionelectronica';
-const START_DATE = new Date('2016-08-16');
+const START_DATE = new Date(2016, 7, 16); // 16-08-2016 local
 const OUTPUT_FILE = path.resolve(__dirname, '../../data/editions-map.json');
 const DELAY_MS = 800;    // ms entre requests (respetar el servidor)
 const TIMEOUT_MS = 20000;  // timeout por intento
@@ -45,9 +45,9 @@ function addDays(date, n) {
 }
 
 function parseQueryDate(str) {
-    // DD-MM-YYYY → Date
+    // DD-MM-YYYY → Date (local, sin conversión UTC)
     const [dd, mm, yyyy] = str.split('-');
-    return new Date(`${yyyy}-${mm}-${dd}`);
+    return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
 }
 
 // ─── Delay ────────────────────────────────────────────────────────────────────
