@@ -50,6 +50,7 @@ async function runPipeline(source, documents, params, opts = {}) {
                 fileSize = pdfData.fileSize;
             } catch (err) {
                 console.error(`❌ Error con PDF: ${err.message}`);
+                saveFailedDoc(doc.id, collection, doc.pdfUrl, params.edition, params.section, err.message);
                 continue;
             }
         } else if (doc.text) {
