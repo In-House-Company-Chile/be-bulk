@@ -1,34 +1,15 @@
-/**
- * Bulk Ingest — Diario Oficial de Chile
- *
- * Lee editions-map.json y procesa cada fecha → edición → sección.
- * Usa el pipeline existente (chunk → embed → PostgreSQL + Qdrant).
- *
- * El log registra pg_done y qdrant_done por separado:
- * - Si PG falla     → job completo se reintenta
- * - Si Qdrant falla → solo se reinserta en Qdrant (sin reprocesar PDF/embeddings)
- *
- * Uso:
- *   node src/crawlers/bulk-ingest.js
- *   node src/crawlers/bulk-ingest.js --from=01-01-2020
- *   node src/crawlers/bulk-ingest.js --from=01-01-2020 --to=31-12-2020
- *   node src/crawlers/bulk-ingest.js --section=normas-generales
- *   node src/crawlers/bulk-ingest.js --dry-run
- *   node src/crawlers/bulk-ingest.js --fix-qdrant   (solo reinserta los que faltan en Qdrant)
- */
-
 const fs = require('fs');
 const path = require('path');
 const { getSource } = require('../sources');
-const { runPipeline, runQdrantOnly } = require('../pipeline');
-const { closePool } = require('../core/postgresStore');
+const { runPipeline, runQdrantOnly, reinsertToQdrant } = require('../pipeline');
+const { closePool, getAllDocuments } = require('../core/postgresStore');
 
 // ─── Configuración ────────────────────────────────────────────────────────────
 
 const MAP_FILE = path.resolve(__dirname, '../../data/editions-map.json');
 const LOG_FILE = path.resolve(__dirname, '../../data/bulk-ingest-log.json');
-const DELAY_MS = 1000;
-const DELAY_ON_ERR = 60000; // 60 segundos extra tras error de red
+const DELAY_MS = 3000;
+const DELAY_ON_ERR = 60000;
 
 const ALL_SECTIONS = [
     'normas-generales',
@@ -68,9 +49,7 @@ function toQueryDate(isoDate) {
 // ─── Log ──────────────────────────────────────────────────────────────────────
 
 function loadLog() {
-    if (fs.existsSync(LOG_FILE)) {
-        return JSON.parse(fs.readFileSync(LOG_FILE, 'utf-8'));
-    }
+    if (fs.existsSync(LOG_FILE)) return JSON.parse(fs.readFileSync(LOG_FILE, 'utf-8'));
     return { updated_at: null, processed: {} };
 }
 
@@ -79,48 +58,22 @@ function saveLog(log) {
     fs.writeFileSync(LOG_FILE, JSON.stringify(log, null, 2));
 }
 
-function logKey(isoDate, edition, section) {
-    return `${isoDate}|${edition}|${section}`;
-}
-
-function getLogEntry(log, isoDate, edition, section) {
-    return log.processed[logKey(isoDate, edition, section)] || null;
-}
+function logKey(isoDate, edition, section) { return `${isoDate}|${edition}|${section}`; }
+function getLogEntry(log, isoDate, edition, section) { return log.processed[logKey(isoDate, edition, section)] || null; }
 
 function markPgDone(log, isoDate, edition, section, result) {
     const key = logKey(isoDate, edition, section);
-    log.processed[key] = {
-        ...log.processed[key],
-        pg_done: true,
-        qdrant_done: false,
-        done_at: new Date().toISOString(),
-        docs: result.processed,
-        skipped: result.skipped,
-        chunks: result.totalChunks,
-    };
+    log.processed[key] = { ...log.processed[key], pg_done: true, qdrant_done: false, done_at: new Date().toISOString(), docs: result.processed, skipped: result.skipped, chunks: result.totalChunks };
 }
 
 function markQdrantDone(log, isoDate, edition, section, vectors) {
     const key = logKey(isoDate, edition, section);
-    log.processed[key] = {
-        ...log.processed[key],
-        qdrant_done: true,
-        qdrant_at: new Date().toISOString(),
-        vectors,
-    };
+    log.processed[key] = { ...log.processed[key], qdrant_done: true, qdrant_at: new Date().toISOString(), vectors };
 }
 
 function markFullDone(log, isoDate, edition, section, result) {
     const key = logKey(isoDate, edition, section);
-    log.processed[key] = {
-        pg_done: true,
-        qdrant_done: true,
-        done_at: new Date().toISOString(),
-        docs: result.processed,
-        skipped: result.skipped,
-        chunks: result.totalChunks,
-        vectors: result.totalVectors,
-    };
+    log.processed[key] = { pg_done: true, qdrant_done: true, done_at: new Date().toISOString(), docs: result.processed, skipped: result.skipped, chunks: result.totalChunks, vectors: result.totalVectors };
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -129,6 +82,7 @@ async function main() {
     const args = parseArgs();
     const dryRun = args['dry-run'] === true;
     const fixQdrant = args['fix-qdrant'] === true;
+    const syncQdrant = args['sync-qdrant'] === true;
 
     if (!fs.existsSync(MAP_FILE)) {
         console.error(`❌ No se encontró ${MAP_FILE}`);
@@ -141,6 +95,27 @@ async function main() {
     const sections = args.section ? [args.section] : ALL_SECTIONS;
     const fromISO = args.from ? toISODate(args.from) : null;
     const toISO = args.to ? toISODate(args.to) : null;
+
+    // ─── Modo sync-qdrant: lee desde PG directo, ignora el log ───────────────
+    if (syncQdrant) {
+        console.log('='.repeat(60));
+        console.log('SYNC QDRANT — Reinsertando desde PostgreSQL');
+        console.log(`Secciones: ${sections.join(', ')}`);
+        console.log('='.repeat(60));
+
+        for (const section of sections) {
+            console.log(`\n📦 Sección: ${section}`);
+            const source = getSource('diario-oficial', { section });
+            const rows = await getAllDocuments(source.collection);
+            console.log(`   Documentos en PG: ${rows.length}`);
+            if (rows.length === 0) continue;
+            const vectors = await reinsertToQdrant(source, rows);
+            console.log(`   ✅ Vectores reinsertados: ${vectors}`);
+        }
+
+        await closePool();
+        return;
+    }
 
     // ─── Construir jobs ───────────────────────────────────────────────────────
 
@@ -157,13 +132,8 @@ async function main() {
         for (const edition of editions) {
             for (const section of sections) {
                 const entry = getLogEntry(log, isoDate, edition, section);
-
-                // Completo → skip
                 if (entry?.pg_done && entry?.qdrant_done) continue;
-
-                // --fix-qdrant: solo los que tienen PG pero no Qdrant
                 if (fixQdrant && !(entry?.pg_done && !entry?.qdrant_done)) continue;
-
                 jobs.push({
                     isoDate,
                     queryDate: toQueryDate(isoDate),
@@ -179,7 +149,6 @@ async function main() {
     // ─── Resumen ──────────────────────────────────────────────────────────────
 
     const qdrantOnlyCount = jobs.filter(j => j.qdrantOnly).length;
-    const fullCount = jobs.length - qdrantOnlyCount;
 
     console.log('='.repeat(60));
     console.log('BULK INGEST — Diario Oficial de Chile');
@@ -187,7 +156,7 @@ async function main() {
     console.log(`Desde:           ${fromISO || sortedDates[0]}`);
     console.log(`Hasta:           ${toISO || sortedDates.at(-1)}`);
     console.log(`Jobs totales:    ${jobs.length}`);
-    console.log(`  → Full:        ${fullCount}`);
+    console.log(`  → Full:        ${jobs.length - qdrantOnlyCount}`);
     console.log(`  → Solo Qdrant: ${qdrantOnlyCount}`);
     console.log(`Dry run:         ${dryRun}`);
     console.log('='.repeat(60));
@@ -201,8 +170,7 @@ async function main() {
     if (dryRun) {
         console.log('\nPrimeros 10 jobs:');
         jobs.slice(0, 10).forEach((j, i) => {
-            const tag = j.qdrantOnly ? ' [solo qdrant]' : '';
-            console.log(`  ${i + 1}. ${j.isoDate} | edition=${j.edition} | section=${j.section}${tag}`);
+            console.log(`  ${i + 1}. ${j.isoDate} | edition=${j.edition} | section=${j.section}${j.qdrantOnly ? ' [solo qdrant]' : ''}`);
         });
         await closePool();
         return;
@@ -215,18 +183,16 @@ async function main() {
     for (let i = 0; i < jobs.length; i++) {
         const { isoDate, queryDate, edition, section, totalEditions, qdrantOnly } = jobs[i];
         const progress = `[${i + 1}/${jobs.length}]`;
-        const tag = qdrantOnly ? ' 🔄 QDRANT ONLY' : '';
 
         console.log(`\n${'═'.repeat(60)}`);
-        console.log(`${progress} ${queryDate} | edition=${edition} | section=${section}${tag}`);
+        console.log(`${progress} ${queryDate} | edition=${edition} | section=${section}${qdrantOnly ? ' 🔄 QDRANT ONLY' : ''}`);
         console.log('═'.repeat(60));
 
         try {
             const source = getSource('diario-oficial', { section });
             const params = { date: queryDate, edition, section, totalEditions };
 
-            if (syncQdrant || qdrantOnly) {
-                // ── Solo reinsertar en Qdrant desde PostgreSQL ────────────────
+            if (qdrantOnly) {
                 const vectors = await runQdrantOnly(source, params);
                 markQdrantDone(log, isoDate, edition, section, vectors);
                 saveLog(log);
@@ -234,7 +200,6 @@ async function main() {
                 console.log(`✅ ${progress} Qdrant fix: ${vectors} vectores reinsertados`);
 
             } else {
-                // ── Pipeline completo ─────────────────────────────────────────
                 const documents = await source.scrape(params);
 
                 if (documents.length === 0) {
@@ -265,7 +230,6 @@ async function main() {
         } catch (err) {
             errors++;
             console.error(`❌ ${progress} Error en ${queryDate}|${edition}|${section}: ${err.message}`);
-            // Espera extra tras error de red para evitar rate limiting
             console.log(`   ⏳ Esperando ${DELAY_ON_ERR / 1000}s antes de continuar...`);
             await sleep(DELAY_ON_ERR);
         }
