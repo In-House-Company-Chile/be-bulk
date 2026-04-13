@@ -41,8 +41,8 @@ async function runPipeline(source, documents, params, opts = {}) {
     const { skipExisting = true, onPgDone } = opts;
     const collection = source.collection;
     let qdrantCollectionReady = false;
-    let allQdrantPoints = [];
     let totalChunks = 0;
+    let totalVectors = 0;
     let processed = 0;
     let skipped = 0;
     let consecutiveErrors = 0;
@@ -152,16 +152,16 @@ async function runPipeline(source, documents, params, opts = {}) {
                 payload: source.getQdrantPayload(doc, { text: e.text, index: e.index }, chunks.length, params),
             }));
 
-        allQdrantPoints.push(...points);
+        // ── Qdrant upsert por documento (no al final del batch)
+        if (points.length > 0) {
+            console.log(`\n🔮 Guardando ${points.length} vectores en Qdrant...`);
+            await upsertPoints(points, collection);
+        }
+
+        totalVectors += points.length;
         processed++;
         consecutiveErrors = 0;
         console.log(`✅ ${doc.id}: ${chunks.length} chunks, ${points.length} vectores`);
-    }
-
-    // ── Batch upsert Qdrant
-    if (allQdrantPoints.length > 0) {
-        console.log(`\n🔮 Guardando ${allQdrantPoints.length} vectores en Qdrant...`);
-        await upsertPoints(allQdrantPoints, collection);
     }
 
     return { processed, skipped, totalChunks, totalVectors: allQdrantPoints.length };
