@@ -221,4 +221,57 @@ async function runQdrantOnly(source, params) {
     return allPoints.length;
 }
 
-module.exports = { runPipeline, runQdrantOnly };
+// ─── Reinsertar colección completa a Qdrant desde PG ─────────────────────────
+
+async function reinsertToQdrant(source, rows) {
+    const collection = source.collection;
+    let allPoints = [];
+    let qdrantCollectionReady = false;
+    const BATCH_SIZE = 50;
+
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const chunks = row.content?.chunks || [];
+        if (chunks.length === 0) continue;
+
+        const embeddings = await getEmbeddingsBatch(chunks.map(c => c.text));
+
+        if (!qdrantCollectionReady && embeddings.length > 0 && embeddings[0].vector) {
+            await ensureCollection(embeddings[0].vector.length, collection);
+            qdrantCollectionReady = true;
+        }
+
+        const doc = {
+            id: row.id,
+            title: row.metadata?.title || '',
+            organism: row.metadata?.organism || '',
+            metadata: row.metadata || {},
+        };
+
+        const points = embeddings
+            .filter(e => e.vector !== null)
+            .map(e => ({
+                id: generatePointId(row.id, e.index),
+                vector: e.vector,
+                payload: source.getQdrantPayload(doc, { text: e.text, index: e.index }, chunks.length, {}),
+            }));
+
+        allPoints.push(...points);
+
+        // Upsert en batches para no acumular demasiado en memoria
+        if (allPoints.length >= BATCH_SIZE * 10) {
+            await upsertPoints(allPoints, collection);
+            console.log(`   🔮 Insertados ${allPoints.length} vectores (${i + 1}/${rows.length} docs)`);
+            allPoints = [];
+        }
+    }
+
+    if (allPoints.length > 0) {
+        await upsertPoints(allPoints, collection);
+        console.log(`   🔮 Insertados ${allPoints.length} vectores finales`);
+    }
+
+    return allPoints.length;
+}
+
+module.exports = { runPipeline, runQdrantOnly, reinsertToQdrant };

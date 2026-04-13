@@ -225,7 +225,7 @@ async function main() {
             const source = getSource('diario-oficial', { section });
             const params = { date: queryDate, edition, section, totalEditions };
 
-            if (qdrantOnly) {
+            if (syncQdrant || qdrantOnly) {
                 // ── Solo reinsertar en Qdrant desde PostgreSQL ────────────────
                 const vectors = await runQdrantOnly(source, params);
                 markQdrantDone(log, isoDate, edition, section, vectors);

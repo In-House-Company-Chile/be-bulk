@@ -78,6 +78,15 @@ async function getDocumentsByEdition(edition, collection) {
   return res.rows;
 }
 
+async function getAllDocuments(collection) {
+  const db = getPool();
+  const res = await db.query(
+    `SELECT id, content, metadata FROM public.documents WHERE collection = $1 ORDER BY created_at ASC`,
+    [collection]
+  );
+  return res.rows;
+}
+
 async function closePool() {
   if (pool) {
     await pool.end();
@@ -86,4 +95,4 @@ async function closePool() {
   }
 }
 
-module.exports = { getPool, upsertDocument, documentExists, getDocument, getDocumentsByEdition, closePool };
+module.exports = { getPool, upsertDocument, documentExists, getDocument, getDocumentsByEdition, getAllDocuments, closePool };
