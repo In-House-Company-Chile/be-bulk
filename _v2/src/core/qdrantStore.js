@@ -10,7 +10,19 @@ function collectionUrl(collection) {
   return `${config.qdrant.url}/collections/${collection}`;
 }
 
-// ─── ensureCollection ─────────────────────────────────────────────────────────
+// Cache del tipo de vector por colección: true = named, false = plain
+const namedVectorCache = {};
+
+async function _isNamedVector(collection) {
+  if (namedVectorCache[collection] !== undefined) return namedVectorCache[collection];
+  const res = await axios.get(collectionUrl(collection), { timeout: 10000 });
+  const params = res.data?.result?.config?.params?.vectors;
+  // Named vectors tienen keys con objetos: { "default": { size, distance } }
+  // Plain vectors son: { size, distance }
+  const isNamed = params && typeof params.size === 'undefined';
+  namedVectorCache[collection] = isNamed;
+  return isNamed;
+}
 
 async function ensureCollection(vectorSize, collection) {
   const url = collectionUrl(collection);
@@ -60,6 +72,7 @@ async function _createCollection(url, collection, vectorSize) {
 async function upsertPoints(points, collection) {
   const url = `${collectionUrl(collection)}/points`;
   const batchSize = 100;
+  const isNamed = await _isNamedVector(collection);
 
   for (let i = 0; i < points.length; i += batchSize) {
     const batch = points.slice(i, i + batchSize);
@@ -67,7 +80,7 @@ async function upsertPoints(points, collection) {
     const body = {
       points: batch.map(p => ({
         id: p.id,
-        vector: { default: p.vector },
+        vector: isNamed ? { default: p.vector } : p.vector,
         payload: p.payload,
       })),
     };
@@ -120,9 +133,10 @@ async function scrollPoints(collection, limit = 10) {
 
 async function search(vector, collection, limit = 5) {
   const url = `${collectionUrl(collection)}/points/search`;
+  const isNamed = await _isNamedVector(collection);
 
   const res = await axios.post(url, {
-    vector: { name: 'default', vector },
+    vector: isNamed ? { name: 'default', vector } : vector,
     limit,
     with_payload: true,
   }, {
