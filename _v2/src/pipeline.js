@@ -222,18 +222,33 @@ async function runQdrantOnly(source, params) {
 }
 
 // ─── Reinsertar colección completa a Qdrant desde PG ─────────────────────────
+// Verifica doc por doc si ya existe en Qdrant antes de regenerar embeddings.
 
 async function reinsertToQdrant(source, rows) {
     const collection = source.collection;
     let allPoints = [];
     let qdrantCollectionReady = false;
-    const BATCH_SIZE = 50;
+    let skipped = 0;
+    let inserted = 0;
+    const FLUSH_SIZE = 500; // insertar en Qdrant cada 500 vectores acumulados
 
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         const chunks = row.content?.chunks || [];
         if (chunks.length === 0) continue;
 
+        // ── Verificar si chunk-0 ya existe en Qdrant → doc ya vectorizado
+        const firstPointId = generatePointId(row.id, 0);
+        const exists = await pointExists(collection, firstPointId);
+        if (exists) {
+            skipped++;
+            if (skipped % 500 === 0) {
+                console.log(`   ⏭️  ${skipped} docs ya vectorizados (${i + 1}/${rows.length})`);
+            }
+            continue;
+        }
+
+        // ── Regenerar embeddings
         const embeddings = await getEmbeddingsBatch(chunks.map(c => c.text));
 
         if (!qdrantCollectionReady && embeddings.length > 0 && embeddings[0].vector) {
@@ -258,20 +273,23 @@ async function reinsertToQdrant(source, rows) {
 
         allPoints.push(...points);
 
-        // Upsert en batches para no acumular demasiado en memoria
-        if (allPoints.length >= BATCH_SIZE * 10) {
+        // ── Flush a Qdrant cada FLUSH_SIZE vectores
+        if (allPoints.length >= FLUSH_SIZE) {
             await upsertPoints(allPoints, collection);
-            console.log(`   🔮 Insertados ${allPoints.length} vectores (${i + 1}/${rows.length} docs)`);
+            inserted += allPoints.length;
+            console.log(`   🔮 ${inserted} vectores insertados | ${skipped} saltados | (${i + 1}/${rows.length} docs)`);
             allPoints = [];
         }
     }
 
+    // ── Flush final
     if (allPoints.length > 0) {
         await upsertPoints(allPoints, collection);
-        console.log(`   🔮 Insertados ${allPoints.length} vectores finales`);
+        inserted += allPoints.length;
     }
 
-    return allPoints.length;
+    console.log(`\n✅ Sync completado: ${inserted} vectores insertados, ${skipped} docs saltados`);
+    return inserted;
 }
 
 module.exports = { runPipeline, runQdrantOnly, reinsertToQdrant };
