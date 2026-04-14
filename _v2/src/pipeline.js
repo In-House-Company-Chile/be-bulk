@@ -4,7 +4,7 @@ const { extractTextFromPdf } = require('./core/pdfExtractor');
 const { chunkText } = require('./core/chunker');
 const { getEmbeddingsBatch } = require('./core/embeddings');
 const { upsertDocument, documentExists, getDocumentsByEdition } = require('./core/postgresStore');
-const { ensureCollection, upsertPoints, generatePointId } = require('./core/qdrantStore');
+const { ensureCollection, upsertPoints, pointExists, generatePointId } = require('./core/qdrantStore');
 
 // ─── Failed docs log ──────────────────────────────────────────────────────────
 

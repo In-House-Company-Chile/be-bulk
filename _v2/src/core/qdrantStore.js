@@ -122,6 +122,19 @@ async function upsertPoints(points, collection) {
   console.log(`[Qdrant] Total upserted: ${points.length} points → "${collection}"`);
 }
 
+// ─── pointExists ─────────────────────────────────────────────────────────────
+
+async function pointExists(collection, pointId) {
+  try {
+    await axios.get(`${collectionUrl(collection)}/points/${pointId}`, { timeout: 5000 });
+    return true; // 200 → existe
+  } catch (err) {
+    if (err.response?.status === 404) return false;
+    // Error de red → asumir que no existe y procesar
+    return false;
+  }
+}
+
 // ─── generatePointId ──────────────────────────────────────────────────────────
 
 function generatePointId(cve, chunkIndex) {
@@ -168,4 +181,4 @@ async function search(vector, collection, limit = 5) {
   return res.data.result;
 }
 
-module.exports = { ensureCollection, upsertPoints, generatePointId, scrollPoints, search };
+module.exports = { ensureCollection, upsertPoints, pointExists, generatePointId, scrollPoints, search };
