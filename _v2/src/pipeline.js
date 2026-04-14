@@ -164,7 +164,7 @@ async function runPipeline(source, documents, params, opts = {}) {
         console.log(`✅ ${doc.id}: ${chunks.length} chunks, ${points.length} vectores`);
     }
 
-    return { processed, skipped, totalChunks, totalVectors: allQdrantPoints.length };
+    return { processed, skipped, totalChunks, totalVectors };
 }
 
 // ─── Solo Qdrant (recuperación) ───────────────────────────────────────────────
