@@ -69,6 +69,10 @@ async function _createCollection(url, collection, vectorSize) {
 
 // ─── upsertPoints ─────────────────────────────────────────────────────────────
 
+const QDRANT_RETRY_DELAYS = [5000, 15000, 30000];
+
+async function _sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
 async function upsertPoints(points, collection) {
   const url = `${collectionUrl(collection)}/points`;
   const batchSize = 100;
@@ -76,7 +80,6 @@ async function upsertPoints(points, collection) {
 
   for (let i = 0; i < points.length; i += batchSize) {
     const batch = points.slice(i, i + batchSize);
-
     const body = {
       points: batch.map(p => ({
         id: p.id,
@@ -85,15 +88,33 @@ async function upsertPoints(points, collection) {
       })),
     };
 
-    try {
-      const res = await axios.put(url, body, {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 30000,
-      });
-      console.log(`[Qdrant] Upserted batch ${Math.floor(i / batchSize) + 1} (${batch.length} points) → "${collection}" - status: ${res.data?.status || res.status}`);
-    } catch (err) {
-      const detail = err.response?.data || err.message;
-      console.error(`[Qdrant] Error upserting batch: ${JSON.stringify(detail)}`);
+    let lastErr;
+    for (let attempt = 0; attempt <= QDRANT_RETRY_DELAYS.length; attempt++) {
+      try {
+        const res = await axios.put(url, body, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 30000,
+        });
+        console.log(`[Qdrant] Upserted batch ${Math.floor(i / batchSize) + 1} (${batch.length} points) → "${collection}" - status: ${res.data?.status || res.status}`);
+        lastErr = null;
+        break;
+      } catch (err) {
+        lastErr = err;
+        const is502 = err.response?.status === 502;
+        const isTimeout = err.message?.includes('timeout');
+        if (attempt < QDRANT_RETRY_DELAYS.length && (is502 || isTimeout)) {
+          const wait = QDRANT_RETRY_DELAYS[attempt];
+          console.warn(`[Qdrant] Batch error (${err.response?.status || 'timeout'}), reintentando en ${wait / 1000}s...`);
+          await _sleep(wait);
+        } else {
+          break;
+        }
+      }
+    }
+
+    if (lastErr) {
+      const detail = lastErr.response?.data || lastErr.message;
+      console.error(`[Qdrant] Error upserting batch after retries: ${JSON.stringify(detail)}`);
       throw new Error(`Qdrant upsert failed: ${JSON.stringify(detail)}`);
     }
   }
