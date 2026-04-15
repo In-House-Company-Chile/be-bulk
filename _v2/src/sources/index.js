@@ -1,37 +1,33 @@
 const DiarioOficialSource = require('./diario-oficial');
+const ContraloriaSource   = require('./contraloria');
 
-const sources = {
+/**
+ * Registry de fuentes disponibles.
+ * Clave: nombre usado en --source=<nombre>
+ */
+const SOURCES = {
     'diario-oficial': DiarioOficialSource,
-    // 'poder-judicial': PoderJudicialSource,
-    // 'sii': SIISource,
+    'contraloria':    ContraloriaSource,
 };
 
 /**
- * Instancia la fuente correcta con sus parámetros.
- * @param {string} name    - Nombre de la fuente (--source)
- * @param {object} args    - Args parseados del CLI (incluye --section, etc.)
+ * Retorna una instancia de la fuente solicitada.
+ * @param {string} sourceName
+ * @param {object} options - Opciones adicionales (ej: section para diario-oficial)
  */
-function getSource(name, args = {}) {
-    const SourceClass = sources[name];
+function getSource(sourceName, options = {}) {
+    const SourceClass = SOURCES[sourceName];
     if (!SourceClass) {
-        const available = Object.keys(sources).join(', ');
-        throw new Error(`Fuente "${name}" no encontrada. Disponibles: ${available}`);
+        throw new Error(
+            `Fuente desconocida: "${sourceName}". Disponibles: ${Object.keys(SOURCES).join(', ')}`
+        );
     }
 
-    // diario-oficial necesita saber qué sección instanciar
-    if (name === 'diario-oficial') {
-        const section = args.section || 'normas-generales';
-        return new SourceClass(section);
+    if (sourceName === 'diario-oficial') {
+        return new SourceClass(options.section);
     }
 
     return new SourceClass();
 }
 
-function listSources() {
-    return Object.entries(sources).map(([name, SourceClass]) => ({
-        name,
-        params: SourceClass.getParamsHelp(),
-    }));
-}
-
-module.exports = { getSource, listSources };
+module.exports = { SOURCES, getSource };
