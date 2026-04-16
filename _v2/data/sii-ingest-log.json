@@ -1,0 +1,20 @@
+{
+  "processed": {
+    "year_2024": {
+      "pg_done": true,
+      "qdrant_done": true,
+      "docs": 0,
+      "chunks": 0,
+      "vectors": 0,
+      "processed_at": "2026-04-16T20:36:20.887Z"
+    },
+    "year_2026": {
+      "pg_done": true,
+      "qdrant_done": true,
+      "docs": 0,
+      "chunks": 0,
+      "vectors": 0,
+      "processed_at": "2026-04-16T20:36:33.922Z"
+    }
+  }
+}
