@@ -123,9 +123,10 @@ async function runPipeline(source, documents, params, opts = {}) {
         await upsertDocument({
             id: doc.id,
             collection,
-            filename: doc.pdfUrl ? `${cve}.pdf` : `${cve}.txt`,
+            filename: doc.filename || (doc.pdfUrl ? `${cve}.pdf` : `${cve}.txt`),
             filePath: doc.pdfUrl || null,
             content: {
+                ...(doc.rawJson || {}),
                 fullText: text,
                 chunks: chunks.map((c, idx) => ({
                     index: idx,

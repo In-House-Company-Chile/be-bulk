@@ -10,7 +10,7 @@ module.exports = {
   },
   qdrant: {
     url: process.env.QDRANT_URL || 'http://localhost:6333',
-    collection: process.env.QDRANT_COLLECTION || 'do_normas_generales',
+    collection: process.env.QDRANT_COLLECTION || 'test',
   },
   embedding: {
     apiUrl: process.env.EMBEDDING_API_URL || 'http://ms-vector.governare.ai/embed',
