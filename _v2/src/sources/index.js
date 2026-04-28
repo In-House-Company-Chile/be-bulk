@@ -1,11 +1,13 @@
 const DiarioOficialSource = require('./diario-oficial');
 const ContraloriaSource = require('./contraloria');
 const SiiSource = require('./sii');
+const TdlcSource = require('./tdlc');
 
 const SOURCES = {
     'diario-oficial': DiarioOficialSource,
     'contraloria': ContraloriaSource,
     'sii': SiiSource,
+    'tdlc': TdlcSource,
 };
 
 function getSource(sourceName, options = {}) {
