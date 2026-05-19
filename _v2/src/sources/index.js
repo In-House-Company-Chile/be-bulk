@@ -4,6 +4,9 @@ const SiiSource = require('./sii');
 const TdlcSource = require('./tdlc');
 const TdpiSource = require('./tdpi'); // <-- Nueva fuente
 const SiesSource = require('./sies');
+const SnifaSource = require('./snifa');
+const SecSource = require('./sec');
+const UafSource = require('./uaf');
 
 const SOURCES = {
     'diario-oficial': DiarioOficialSource,
@@ -12,6 +15,9 @@ const SOURCES = {
     'tdlc': TdlcSource,
     'tdpi': TdpiSource, // <-- Registro
     'sies': SiesSource, // <-- Registro
+    'snifa': SnifaSource,
+    'sec': SecSource,
+    'uaf': UafSource,
 };
 
 function getSource(sourceName, options = {}) {
