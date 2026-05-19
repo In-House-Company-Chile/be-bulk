@@ -3,10 +3,11 @@ const ContraloriaSource = require('./contraloria');
 const SiiSource = require('./sii');
 const TdlcSource = require('./tdlc');
 const TdpiSource = require('./tdpi'); // <-- Nueva fuente
-const SiesSource = require('./sies');
-const SnifaSource = require('./snifa');
-const SecSource = require('./sec');
-const UafSource = require('./uaf');
+// const SiesSource = require('./sies');
+// const SnifaSource = require('./snifa');
+// const SecSource = require('./sec');
+// const UafSource = require('./uaf');
+const TribunalAmbientalSource = require('./tribunal-ambiental');
 
 const SOURCES = {
     'diario-oficial': DiarioOficialSource,
@@ -14,10 +15,11 @@ const SOURCES = {
     'sii': SiiSource,
     'tdlc': TdlcSource,
     'tdpi': TdpiSource, // <-- Registro
-    'sies': SiesSource, // <-- Registro
-    'snifa': SnifaSource,
-    'sec': SecSource,
-    'uaf': UafSource,
+    // 'sies': SiesSource, // <-- Registro
+    // 'snifa': SnifaSource,
+    // 'sec': SecSource,
+    // 'uaf': UafSource,
+    'tribunal-ambiental': TribunalAmbientalSource
 };
 
 function getSource(sourceName, options = {}) {
